@@ -4,13 +4,20 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,6 +56,7 @@ fun CardCollectionScreen(
     var focus by remember { mutableStateOf<SoundFocus?>(null) }
     var rarity by remember { mutableStateOf<CardRarity?>(null) }
     var onlyNew by remember { mutableStateOf(false) }
+    var search by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<CardItem?>(null) }
     var buying by remember { mutableStateOf<CardItem?>(null) }
     var purchaseState by remember { mutableStateOf<CardPurchaseUiState>(CardPurchaseUiState.Idle) }
@@ -60,18 +68,12 @@ fun CardCollectionScreen(
 
     MineScreen {
         ScreenTitle("Cartas dos Sons", "${owned.size}/$total cartas - $percent%")
-        PixelCard {
-            Text("Treina os sons e completa a tua coleção de cartas.", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Novas: $newCards   Diamantes: ${progress.diamondBalance}", fontSize = 16.sp)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Coleção", "Baús", "Loja").forEachIndexed { index, label ->
-                BlockButton(label, { tab = index }, Modifier.weight(1f), color = if (tab == index) Color(0xFFD6A22A) else Color(0xFF4A90A4))
-            }
-        }
+        CardCollectionHeader(newCards, progress.diamondBalance)
+        CardTabs(tab) { tab = it }
         when (tab) {
             0 -> {
                 CollectionSummary(owned = owned, newCount = newCards)
+                CardSearchField(search) { search = it }
                 CardFilters(
                     focus,
                     rarity,
@@ -86,6 +88,7 @@ fun CardCollectionScreen(
                         .filter { focus == null || it.soundFocus == focus }
                         .filter { rarity == null || it.rarity == rarity }
                         .filter { !onlyNew || (progress.newRewardIds.contains(it.id) && !progress.viewedRewardIds.contains(it.id)) }
+                        .filter { it.matchesSearch(search) }
                         .sortedWith(compareBy<CardItem> { it.soundFocus.ordinal }.thenBy { it.rarity.ordinal }.thenBy { it.cardNumber })
                 if (ownedCards.isEmpty()) {
                     PixelCard {
@@ -125,10 +128,12 @@ fun CardCollectionScreen(
                     Text("Loja de cartas", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Text("As cartas que já tens ficam marcadas e não podem ser compradas outra vez.", fontSize = 16.sp)
                 }
+                CardSearchField(search) { search = it }
                 CardGrid(
                     cards =
                     CardCatalog.cards
                         .filter { it.shopEligible }
+                        .filter { it.matchesSearch(search) }
                         .sortedWith(compareBy<CardItem> { owned.contains(it.id) }.thenBy { it.price }.thenBy { it.cardNumber }),
                     owned = owned,
                     newIds = emptySet(),
@@ -237,6 +242,29 @@ fun CardCollectionScreen(
 }
 
 @Composable
+private fun CardTabs(
+    selectedTab: Int,
+    onTab: (Int) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("Coleção", "Baús", "Loja").forEachIndexed { index, label ->
+            BlockButton(label, { onTab(index) }, Modifier.weight(1f), color = if (selectedTab == index) Color(0xFFD6A22A) else Color(0xFF4A90A4))
+        }
+    }
+}
+
+@Composable
+private fun CardCollectionHeader(
+    newCards: Int,
+    diamondBalance: Int,
+) {
+    PixelCard {
+        Text("Treina os sons e completa a tua coleção de cartas.", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text("Novas: $newCards   Diamantes: $diamondBalance", fontSize = 16.sp)
+    }
+}
+
+@Composable
 private fun CollectionSummary(
     owned: Set<String>,
     newCount: Int,
@@ -325,6 +353,19 @@ private fun CardFilters(
 }
 
 @Composable
+private fun CardSearchField(
+    search: String,
+    onSearch: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = search,
+        onValueChange = onSearch,
+        label = { Text("Pesquisar carta, palavra ou som") },
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
 private fun CardGrid(
     cards: List<CardItem>,
     owned: Set<String>,
@@ -332,37 +373,59 @@ private fun CardGrid(
     onOpen: (CardItem) -> Unit,
     onBuy: ((CardItem) -> Unit)? = null,
 ) {
-    cards.chunked(2).forEach { row ->
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            row.forEach { card ->
-                val hasCard = owned.contains(card.id)
-                PixelCard(modifier = Modifier.weight(1f)) {
-                    CollectibleCard(
-                        card = card,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(0.75f),
-                        small = true,
-                        locked = !hasCard && onBuy == null,
-                        isNew = newIds.contains(card.id),
-                    )
-                    Text(
-                        if (hasCard) "Já tens" else "${card.price} diamantes",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        BlockButton("Ver", { onOpen(card) }, Modifier.weight(1f), color = Color(0xFF4A90A4))
-                        if (onBuy != null) {
-                            BlockButton(if (hasCard) "Já tens" else "Comprar", {
-                                onBuy(card)
-                            }, Modifier.weight(1f), enabled = !hasCard, color = if (hasCard) Color(0xFF607D8B) else Color(0xFF8B6BB1))
-                        }
+    val gridState = rememberLazyGridState()
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 156.dp),
+        state = gridState,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 640.dp),
+        contentPadding = PaddingValues(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(
+            items = cards,
+            key = { it.id },
+            contentType = { it.rarity.name },
+        ) { card ->
+            val hasCard = owned.contains(card.id)
+            PixelCard {
+                CollectibleCard(
+                    card = card,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(0.75f),
+                    small = true,
+                    locked = !hasCard && onBuy == null,
+                    isNew = newIds.contains(card.id),
+                )
+                Text(
+                    if (hasCard) "Já tens" else "${card.price} diamantes",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    BlockButton("Ver", { onOpen(card) }, Modifier.weight(1f), color = Color(0xFF4A90A4))
+                    if (onBuy != null) {
+                        BlockButton(
+                            if (hasCard) "Já tens" else "Comprar",
+                            { onBuy(card) },
+                            Modifier.weight(1f),
+                            enabled = !hasCard,
+                            color = if (hasCard) Color(0xFF607D8B) else Color(0xFF8B6BB1),
+                        )
                     }
                 }
             }
-            if (row.size == 1) Box(Modifier.weight(1f))
         }
     }
+}
+
+private fun CardItem.matchesSearch(search: String): Boolean {
+    val clean = search.trim()
+    if (clean.isBlank()) return true
+    return name.contains(clean, ignoreCase = true) ||
+        word.contains(clean, ignoreCase = true) ||
+        soundFocus.label.contains(clean, ignoreCase = true) ||
+        cardNumber.toString() == clean
 }
 
 @Composable

@@ -1,40 +1,35 @@
 package com.brunogp.minasdossons.audio
 
 import android.content.Context
+import android.content.Intent
 import android.speech.tts.TextToSpeech
-import java.util.Locale
+import kotlinx.coroutines.flow.StateFlow
 
 class SpeechHelper(
     context: Context,
-) : TextToSpeech.OnInitListener,
-    SpeechOutput {
-    private var ready = false
-    private val tts = TextToSpeech(context.applicationContext, this)
-
-    override fun onInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS) {
-            val pt = Locale("pt", "PT")
-            val result = tts.setLanguage(pt)
-            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                tts.language = Locale.getDefault()
-            }
-            ready = true
-        }
+) : SpeechOutput {
+    private var manager: TtsManager? = null
+    private val androidAdapter = AndroidTtsEngineAdapter(context.applicationContext) { success ->
+        manager?.onEngineInitialized(success)
     }
+    private val ttsManager = TtsManager(androidAdapter.asAdapter()).also { manager = it }
+
+    val ttsState: StateFlow<TtsState> = ttsManager.state
+
+    fun refresh(preferences: TtsPreferences): TtsState = ttsManager.refresh(preferences)
+
+    fun installVoiceDataIntent(): Intent = Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)
 
     override fun speak(
         text: String,
         slow: Boolean,
-        enabled: Boolean,
-    ) {
-        if (!ready || !enabled) return
-        tts.setSpeechRate(if (slow) 0.72f else 0.95f)
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "minas-dos-sons")
+        preferences: TtsPreferences,
+    ): Boolean {
+        ttsManager.refresh(preferences)
+        return ttsManager.speak(text, slow)
     }
 
-    override fun stop() {
-        tts.stop()
-    }
+    override fun stop() = ttsManager.stop()
 
-    override fun shutdown() = tts.shutdown()
+    override fun shutdown() = ttsManager.shutdown()
 }

@@ -11,7 +11,12 @@ interface ReferenceSoundOutput {
 }
 
 interface SpeechOutput {
-    fun speak(text: String, slow: Boolean = false, enabled: Boolean = true)
+    fun speak(
+        text: String,
+        slow: Boolean,
+        preferences: TtsPreferences,
+    ): Boolean
+
     fun stop()
     fun shutdown()
 }
@@ -33,7 +38,7 @@ class AudioCoordinator(
     fun playTextOrReference(
         text: String,
         slowVoice: Boolean,
-        ttsEnabled: Boolean,
+        ttsPreferences: TtsPreferences,
     ) {
         stopAll()
         val playbackGeneration = nextGeneration()
@@ -64,7 +69,7 @@ class AudioCoordinator(
             return
         }
 
-        speech.speak(text, slowVoice, ttsEnabled)
+        speech.speak(text, slowVoice, ttsPreferences)
     }
 
     fun stopAll() {

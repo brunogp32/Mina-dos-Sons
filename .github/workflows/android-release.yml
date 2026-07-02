@@ -48,6 +48,27 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          VERSION_NAME="$(grep -E 'versionName = ' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          if [[ -z "${VERSION_NAME}" ]]; then
+            echo "Could not resolve versionName from Gradle." | tee build/reports/ci/release-version.log
+            exit 1
+          fi
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "v${VERSION_NAME}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match versionName ${VERSION_NAME}." | tee build/reports/ci/release-version.log
+            exit 1
+          fi
+          {
+            echo "VERSION_NAME=${VERSION_NAME}"
+            echo "APK_NAME=Mina-dos-Sons-v${VERSION_NAME}.apk"
+            echo "AAB_NAME=Mina-dos-Sons-v${VERSION_NAME}.aab"
+          } >> "${GITHUB_ENV}"
+          echo "Resolved version ${VERSION_NAME}" | tee build/reports/ci/release-version.log
+
       - name: Test and build release
         shell: bash
         env:
@@ -69,11 +90,19 @@ jobs:
             --no-daemon --stacktrace 2>&1 | tee build/reports/ci/release-build.log
           APK="$(find app/build/outputs/apk/release -name '*.apk' | head -n 1)"
           AAB="$(find app/build/outputs/bundle/release -name '*.aab' | head -n 1)"
+          if [[ -z "${APK}" || "${APK}" == *debug* || "${APK}" == *unsigned* ]]; then
+            echo "Release APK is missing, debug or unsigned: ${APK}" | tee build/reports/ci/release-apk-validation.log
+            exit 1
+          fi
+          if [[ -z "${AAB}" ]]; then
+            echo "Release AAB is missing." | tee build/reports/ci/release-apk-validation.log
+            exit 1
+          fi
           "${ANDROID_HOME}/build-tools/$(ls "${ANDROID_HOME}/build-tools" | sort -V | tail -n 1)/apksigner" verify --verbose --print-certs "${APK}" \
             | tee build/reports/ci/apksigner.log
           sha256sum "${APK}" "${AAB}" | tee SHA256SUMS
-          cp "${APK}" "Mina-dos-Sons-v1.1.0.apk"
-          cp "${AAB}" "Mina-dos-Sons-v1.1.0.aab"
+          cp "${APK}" "${APK_NAME}"
+          cp "${AAB}" "${AAB_NAME}"
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -83,8 +112,8 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "${GITHUB_REF_NAME}" \
-            Mina-dos-Sons-v1.1.0.apk \
-            Mina-dos-Sons-v1.1.0.aab \
+            "${APK_NAME}" \
+            "${AAB_NAME}" \
             SHA256SUMS \
             THIRD_PARTY_NOTICES.md \
             ASSET_LICENSES.md \

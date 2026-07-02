@@ -3,6 +3,7 @@ package com.brunogp.minasdossons.audio
 import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
+import com.brunogp.minasdossons.data.GameProgress
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,6 +21,11 @@ class AudioRecorder(
         private set
 
     fun fileForLabel(label: String): File = File(recordingDir(), "${visibleFileName(label)}.m4a")
+
+    fun migrateProgress(progress: GameProgress): GameProgress = RecordingFileMigration(
+        legacyDir = File(context.filesDir, "recordings"),
+        targetDir = recordingDir(),
+    ).migrate(progress)
 
     fun start(
         scope: CoroutineScope,

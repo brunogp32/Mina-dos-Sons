@@ -3,6 +3,7 @@ package com.brunogp.minasdossons.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -40,6 +41,7 @@ fun ParentModeScreen(
     nav: NavController,
 ) {
     val progress by vm.progress.collectAsState()
+    val tts by vm.ttsState.collectAsState()
     val challenge = remember { Random.nextInt(2, 10) to Random.nextInt(2, 10) }
     val challengeAnswer = challenge.first * challenge.second
     var answer by remember { mutableStateOf("") }
@@ -51,6 +53,7 @@ fun ParentModeScreen(
     var pairStatus by remember { mutableStateOf("") }
     var recordingFilter by remember { mutableStateOf("Todas") }
     var recordingSearch by remember { mutableStateOf("") }
+    var confirmReset by remember { mutableStateOf(false) }
     val allPairs = LocalGameData.minimalPairs + progress.customMinimalPairs
 
     MineScreen {
@@ -85,6 +88,10 @@ fun ParentModeScreen(
                 fontWeight = FontWeight.Bold,
             )
         }
+        ParentTtsCard(vm, tts.message, tts.selectedVoice?.displayLanguage, tts.selectedVoice?.name, tts.selectedVoice?.requiresNetwork, progress.allowPortugueseVoiceFallback) {
+            vm.save(progress.copy(allowPortugueseVoiceFallback = it))
+            vm.refreshPortugueseVoice()
+        }
         PixelCard {
             Text("Sons oficiais", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text("Os quatro sons modelo usam os áudios preparados na aplicação. Não podem ser editados no Modo Pais.", fontSize = 16.sp)
@@ -93,7 +100,7 @@ fun ParentModeScreen(
                     Text("${sound.displayText} ${sound.phoneme}", fontSize = 17.sp, modifier = Modifier.weight(1f))
                     BlockButton(
                         "Ouvir",
-                        { vm.referenceAudioPlayer.playReferenceSound(sound) },
+                        { vm.playReferenceSound(sound) },
                         Modifier.weight(1f),
                         color = Color(0xFF4A90A4),
                     )
@@ -119,7 +126,7 @@ fun ParentModeScreen(
             BlockButton("Desbloquear tudo", { vm.unlockAll() }, Modifier.weight(1f), color = Color(0xFFD6A22A))
             BlockButton("Bloquear por progresso", { vm.lockByProgress() }, Modifier.weight(1f), color = Color(0xFF607D8B))
         }
-        BlockButton("Reiniciar progresso", { vm.reset() }, color = Color(0xFFD24D57))
+        BlockButton("Reiniciar progresso", { confirmReset = true }, color = Color(0xFFD24D57))
         PixelCard {
             Text("Sons a treinar", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             LocalGameData.targets.forEach { target ->
@@ -199,6 +206,30 @@ fun ParentModeScreen(
         }
         BackButton(nav)
     }
+
+    if (confirmReset) {
+        ResetProgressDialog(
+            onDismiss = { confirmReset = false },
+            onConfirm = {
+                confirmReset = false
+                vm.reset()
+            },
+        )
+    }
+}
+
+@Composable
+private fun ResetProgressDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Reiniciar progresso?") },
+        text = { Text("Esta ação reinicia estrelas, mundos, diamantes, cartas e baús. As gravações devem ser apagadas separadamente numa versão própria dessa ferramenta.") },
+        confirmButton = { BlockButton("Sim, reiniciar", onConfirm, color = Color(0xFFD24D57)) },
+        dismissButton = { BlockButton("Cancelar", onDismiss, color = Color(0xFF607D8B)) },
+    )
 }
 
 @Composable
@@ -225,8 +256,7 @@ private fun RecordingListCard(
             Text("Ainda não há gravações neste filtro.", fontSize = 17.sp)
         } else {
             filtered.toSortedMap().forEach { (name, path) ->
-                val storedFile = File(path)
-                val file = if (storedFile.exists()) storedFile else vm.recorder.fileForLabel(name)
+                val file = File(path)
                 val date =
                     recordingDates[name] ?: runCatching {
                         Instant
@@ -237,8 +267,37 @@ private fun RecordingListCard(
                     }.getOrDefault("")
                 Text("$name - ${groupForRecording(name)} - Gravado", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Text(date, fontSize = 13.sp)
-                BlockButton("Ouvir $name", { vm.player.play(file) }, color = Color(0xFF4A90A4))
+                BlockButton("Ouvir $name", { vm.playRecording(file) }, color = Color(0xFF4A90A4))
             }
+        }
+    }
+}
+
+@Composable
+private fun ParentTtsCard(
+    vm: AppViewModel,
+    message: String,
+    voiceLanguage: String?,
+    voiceName: String?,
+    requiresNetwork: Boolean?,
+    allowFallback: Boolean,
+    onAllowFallback: (Boolean) -> Unit,
+) {
+    PixelCard {
+        Text("Voz portuguesa", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(message, fontSize = 16.sp)
+        if (voiceLanguage != null && voiceName != null && requiresNetwork != null) {
+            Text("$voiceLanguage - $voiceName", fontSize = 15.sp)
+            Text(if (requiresNetwork) "Precisa de rede" else "Disponível offline", fontSize = 15.sp)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BlockButton("Verificar", { vm.refreshPortugueseVoice() }, Modifier.weight(1f))
+            BlockButton("Instalar", { vm.installPortugueseVoice() }, Modifier.weight(1f), color = Color(0xFFD6A22A))
+        }
+        BlockButton("Testar voz", { vm.testPortugueseVoice() }, color = Color(0xFF4A90A4))
+        Row(horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Permitir outra voz portuguesa", fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Switch(allowFallback, onAllowFallback)
         }
     }
 }

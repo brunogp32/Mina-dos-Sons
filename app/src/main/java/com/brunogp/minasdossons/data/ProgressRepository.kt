@@ -55,6 +55,7 @@ class ProgressRepository(private val context: Context) {
         val completedWorldsForRewards = stringPreferencesKey("completed_worlds_for_rewards")
         val allUnlockedByParent = booleanPreferencesKey("all_unlocked_by_parent")
         val ttsEnabled = booleanPreferencesKey("tts_enabled")
+        val allowPortugueseVoiceFallback = booleanPreferencesKey("allow_portuguese_voice_fallback")
         val slowVoice = booleanPreferencesKey("slow_voice")
         val largeText = booleanPreferencesKey("large_text")
         val easyMode = booleanPreferencesKey("easy_mode")
@@ -97,6 +98,7 @@ class ProgressRepository(private val context: Context) {
             completedWorldsForRewards = decodeInts(prefs[Keys.completedWorldsForRewards]),
             allUnlockedByParent = prefs[Keys.allUnlockedByParent] ?: false,
             ttsEnabled = prefs[Keys.ttsEnabled] ?: true,
+            allowPortugueseVoiceFallback = prefs[Keys.allowPortugueseVoiceFallback] ?: false,
             slowVoice = prefs[Keys.slowVoice] ?: false,
             largeText = prefs[Keys.largeText] ?: false,
             easyMode = prefs[Keys.easyMode] ?: true,
@@ -140,6 +142,7 @@ class ProgressRepository(private val context: Context) {
             prefs[Keys.completedWorldsForRewards] = encode(progress.completedWorldsForRewards)
             prefs[Keys.allUnlockedByParent] = progress.allUnlockedByParent
             prefs[Keys.ttsEnabled] = progress.ttsEnabled
+            prefs[Keys.allowPortugueseVoiceFallback] = progress.allowPortugueseVoiceFallback
             prefs[Keys.slowVoice] = progress.slowVoice
             prefs[Keys.largeText] = progress.largeText
             prefs[Keys.easyMode] = progress.easyMode

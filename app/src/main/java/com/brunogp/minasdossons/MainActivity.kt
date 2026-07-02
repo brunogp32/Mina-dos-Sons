@@ -1,6 +1,7 @@
 package com.brunogp.minasdossons
 
 import android.app.Application
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +13,8 @@ import com.brunogp.minasdossons.audio.AudioRecorder
 import com.brunogp.minasdossons.audio.ReferenceAudioPlayer
 import com.brunogp.minasdossons.audio.ReferenceAudioRepository
 import com.brunogp.minasdossons.audio.SpeechHelper
+import com.brunogp.minasdossons.audio.TtsPreferences
+import com.brunogp.minasdossons.audio.TtsState
 import com.brunogp.minasdossons.data.GameProgress
 import com.brunogp.minasdossons.data.MinimalPair
 import com.brunogp.minasdossons.data.ProgressRepository
@@ -29,6 +32,7 @@ import com.brunogp.minasdossons.navigation.AppNavGraph
 import com.brunogp.minasdossons.ui.theme.MinasDosSonsTheme
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -56,6 +60,7 @@ class AppViewModel(
     val referenceAudioRepository = ReferenceAudioRepository(application)
     val referenceAudioPlayer = ReferenceAudioPlayer(application, referenceAudioRepository)
     private val audioCoordinator = AudioCoordinator(viewModelScope, speech, referenceAudioPlayer, player)
+    val ttsState: StateFlow<TtsState> = speech.ttsState
 
     val progress: StateFlow<GameProgress> =
         repository.progress.stateIn(
@@ -64,12 +69,46 @@ class AppViewModel(
             GameProgress(),
         )
 
+    init {
+        viewModelScope.launch {
+            val current = progress.first()
+            val migrated = recorder.migrateProgress(current)
+            if (migrated != current) {
+                repository.saveProgress(migrated)
+            }
+            speech.refresh(migrated.ttsPreferences())
+        }
+    }
+
     fun save(progress: GameProgress) {
         viewModelScope.launch { repository.saveProgress(progress) }
     }
 
     fun playTextOrReference(text: String) {
-        audioCoordinator.playTextOrReference(text, progress.value.slowVoice, progress.value.ttsEnabled)
+        audioCoordinator.playTextOrReference(text, progress.value.slowVoice, progress.value.ttsPreferences())
+    }
+
+    fun playReferenceSound(sound: com.brunogp.minasdossons.audio.ReferenceSound) {
+        audioCoordinator.playTextOrReference(sound.displayText, progress.value.slowVoice, progress.value.ttsPreferences())
+    }
+
+    fun playRecording(file: java.io.File?) {
+        stopExerciseAudio()
+        player.play(file)
+    }
+
+    fun refreshPortugueseVoice() {
+        speech.refresh(progress.value.ttsPreferences())
+    }
+
+    fun testPortugueseVoice() {
+        speech.speak("A mina dos sons está pronta.", progress.value.slowVoice, progress.value.ttsPreferences())
+    }
+
+    fun installPortugueseVoice() {
+        getApplication<Application>().startActivity(
+            speech.installVoiceDataIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
     }
 
     fun stopExerciseAudio() {
@@ -202,3 +241,8 @@ class AppViewModel(
         super.onCleared()
     }
 }
+
+private fun GameProgress.ttsPreferences(): TtsPreferences = TtsPreferences(
+    enabled = ttsEnabled,
+    allowPortugueseFallback = allowPortugueseVoiceFallback,
+)

@@ -5,6 +5,7 @@ import com.brunogp.minasdossons.audio.RecordingPlaybackOutput
 import com.brunogp.minasdossons.audio.ReferenceSound
 import com.brunogp.minasdossons.audio.ReferenceSoundOutput
 import com.brunogp.minasdossons.audio.SpeechOutput
+import com.brunogp.minasdossons.audio.TtsPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -19,8 +20,8 @@ class AudioCoordinatorTest {
         val recording = FakeRecordingPlaybackOutput()
         val coordinator = AudioCoordinator(this, speech, reference, recording, sequenceDelayMillis = 1L)
 
-        coordinator.playTextOrReference("SSSS", slowVoice = false, ttsEnabled = true)
-        coordinator.playTextOrReference("ZZZZ", slowVoice = false, ttsEnabled = true)
+        coordinator.playTextOrReference("SSSS", slowVoice = false, ttsPreferences = TtsPreferences())
+        coordinator.playTextOrReference("ZZZZ", slowVoice = false, ttsPreferences = TtsPreferences())
 
         assertEquals(listOf(ReferenceSound.S, ReferenceSound.Z), reference.played)
         assertTrue(reference.stopCount >= 2)
@@ -39,7 +40,7 @@ class AudioCoordinatorTest {
             sequenceDelayMillis = 50L,
         )
 
-        coordinator.playTextOrReference("SSSS ZZZZ", slowVoice = false, ttsEnabled = true)
+        coordinator.playTextOrReference("SSSS ZZZZ", slowVoice = false, ttsPreferences = TtsPreferences())
         delay(5L)
         coordinator.stopAll()
         delay(80L)
@@ -67,8 +68,8 @@ class AudioCoordinatorTest {
         override fun speak(
             text: String,
             slow: Boolean,
-            enabled: Boolean,
-        ) = Unit
+            preferences: TtsPreferences,
+        ): Boolean = true
 
         override fun stop() {
             stopCount += 1

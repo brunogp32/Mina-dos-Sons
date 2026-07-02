@@ -7,6 +7,12 @@ dist/
 *.aab
 *.keystore
 *.jks
+*.p12
+*.pem
+*.base64
+*keystore*.txt
+release-signing.properties
+keystore.properties
 captures/
 .idea/
 *.iml

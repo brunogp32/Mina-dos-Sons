@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,8 +71,16 @@ fun FourSecondRecorder(
     var hasPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasPermission = granted
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            hasPermission = granted
+        }
+
+    DisposableEffect(selectedText) {
+        onDispose {
+            recorder.stop()
+            player.stop()
+        }
     }
 
     fun startFlow() {
@@ -88,20 +97,21 @@ fun FourSecondRecorder(
             }
             state = RecorderUiState.Recording
             secondsLeft = 4
-            val result = recorder.start(
-                scope = scope,
-                label = selectedText,
-                maxMillis = FOUR_SECOND_RECORDING_MS,
-                onFinished = { file ->
-                    state = RecorderUiState.Saving
-                    currentFile = file
-                    onSaved(file)
-                    scope.launch {
-                        delay(350L)
-                        state = RecorderUiState.Recorded
-                    }
-                },
-            )
+            val result =
+                recorder.start(
+                    scope = scope,
+                    label = selectedText,
+                    maxMillis = FOUR_SECOND_RECORDING_MS,
+                    onFinished = { file ->
+                        state = RecorderUiState.Saving
+                        currentFile = file
+                        onSaved(file)
+                        scope.launch {
+                            delay(350L)
+                            state = RecorderUiState.Recorded
+                        }
+                    },
+                )
             if (result.isFailure) {
                 state = RecorderUiState.Error
                 return@launch
@@ -119,7 +129,10 @@ fun FourSecondRecorder(
         Text(characterLabel, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         Text(helperText, fontSize = 17.sp)
         when (state) {
-            RecorderUiState.Preparing -> Text("Prepara-te! $countdown", fontSize = 30.sp, fontWeight = FontWeight.Black)
+            RecorderUiState.Preparing -> {
+                Text("Prepara-te! $countdown", fontSize = 30.sp, fontWeight = FontWeight.Black)
+            }
+
             RecorderUiState.Recording -> {
                 Text("A gravar... ${secondsLeft}s", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD24D57))
                 LinearProgressIndicator(
@@ -130,17 +143,38 @@ fun FourSecondRecorder(
                 )
                 RecordingWaves()
             }
-            RecorderUiState.Saving -> Text("A guardar...", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            RecorderUiState.Recorded -> Text("Gravação guardada!", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2F7D32))
-            RecorderUiState.Playing -> Text("A ouvir...", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            RecorderUiState.Error -> Text("Vamos tentar outra vez.", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD24D57))
-            RecorderUiState.Idle -> Unit
+
+            RecorderUiState.Saving -> {
+                Text("A guardar...", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            }
+
+            RecorderUiState.Recorded -> {
+                Text("Gravação guardada!", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2F7D32))
+            }
+
+            RecorderUiState.Playing -> {
+                Text("A ouvir...", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            }
+
+            RecorderUiState.Error -> {
+                Text("Vamos tentar outra vez.", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD24D57))
+            }
+
+            RecorderUiState.Idle -> {
+                Unit
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BlockButton("Ouvir", onListen, Modifier.weight(1f), color = Color(0xFF4A90A4))
             BlockButton(
                 if (state == RecorderUiState.Recorded) "Gravar outra vez" else "Gravar a minha voz",
-                { if (state != RecorderUiState.Recording && state != RecorderUiState.Preparing && state != RecorderUiState.Saving) startFlow() },
+                {
+                    if (state != RecorderUiState.Recording && state != RecorderUiState.Preparing &&
+                        state != RecorderUiState.Saving
+                    ) {
+                        startFlow()
+                    }
+                },
                 Modifier.weight(1f),
                 enabled = state != RecorderUiState.Recording && state != RecorderUiState.Preparing && state != RecorderUiState.Saving,
                 color = Color(0xFFD24D57),

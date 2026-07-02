@@ -11,7 +11,8 @@ enum class ChestType(
     WOOD("Baú de Madeira", 1, 2..4, "Boa tentativa! Ganhaste um baú!"),
     IRON("Baú de Ferro", 2, 4..7, "Muito bem! Ganhaste um baú de ferro!"),
     GOLD("Baú Dourado", 3, 7..12, "Excelente! Ganhaste um baú dourado!"),
-    CRYSTAL("Baú de Cristal", 4, 12..20, "Perfeito! Descobriste um baú de cristal!");
+    CRYSTAL("Baú de Cristal", 4, 12..20, "Perfeito! Descobriste um baú de cristal!"),
+    ;
 
     companion object {
         fun fromStars(stars: Int): ChestType = when {

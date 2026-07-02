@@ -25,7 +25,8 @@ import com.brunogp.minasdossons.ui.components.BlockButton
 @Composable
 fun MineScreen(content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(Color(0xFF8BD3E6), Color(0xFFA8D16D), Color(0xFF7A5638))))
             .statusBarsPadding()
@@ -39,7 +40,10 @@ fun MineScreen(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun ScreenTitle(title: String, subtitle: String? = null) {
+fun ScreenTitle(
+    title: String,
+    subtitle: String? = null,
+) {
     Text(title, fontSize = 34.sp, fontWeight = FontWeight.Black, color = Color(0xFF2C241B))
     subtitle?.let { Text(it, fontSize = 20.sp, fontWeight = FontWeight.SemiBold) }
 }

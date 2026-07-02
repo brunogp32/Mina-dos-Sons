@@ -15,24 +15,45 @@ object CardRepository {
         )
     }
 
-    fun purchase(progress: GameProgress, cardId: String?, inProgress: Boolean = false): CardPurchaseResult {
-        if (inProgress) return CardPurchaseResult.InProgress
-        val card = cardId?.let(CardCatalog::card) ?: return CardPurchaseResult.InvalidCard
-        if (!card.shopEligible) return CardPurchaseResult.InvalidCard
-        if (progress.ownedRewardIds.contains(card.id)) return CardPurchaseResult.AlreadyOwned
-        if (progress.diamondBalance < card.price) return CardPurchaseResult.InsufficientDiamonds
-        val spent = DiamondRepository.spend(progress, card.price, "Compra de carta: ${card.name}") ?: return CardPurchaseResult.InsufficientDiamonds
-        val updated = spent.copy(
-            ownedRewardIds = spent.ownedRewardIds + card.id,
-            newRewardIds = spent.newRewardIds + card.id,
-        )
+    fun purchase(
+        progress: GameProgress,
+        cardId: String?,
+        inProgress: Boolean = false,
+    ): CardPurchaseResult {
+        val card = cardId?.let(CardCatalog::card)
+        return when {
+            inProgress -> CardPurchaseResult.InProgress
+            card == null || !card.shopEligible -> CardPurchaseResult.InvalidCard
+            progress.ownedRewardIds.contains(card.id) -> CardPurchaseResult.AlreadyOwned
+            progress.diamondBalance < card.price -> CardPurchaseResult.InsufficientDiamonds
+            else -> purchaseAvailableCard(progress, card)
+        }
+    }
+
+    private fun purchaseAvailableCard(
+        progress: GameProgress,
+        card: CardItem,
+    ): CardPurchaseResult {
+        val spent =
+            DiamondRepository.spend(
+                progress = progress,
+                price = card.price,
+                description = "Compra de carta: ${card.name}",
+            ) ?: return CardPurchaseResult.InsufficientDiamonds
+        val updated =
+            spent.copy(
+                ownedRewardIds = spent.ownedRewardIds + card.id,
+                newRewardIds = spent.newRewardIds + card.id,
+            )
         return CardPurchaseResult.Success(updated, card)
     }
 
-    fun markViewed(progress: GameProgress, cardId: String): GameProgress =
-        if (!progress.newRewardIds.contains(cardId) || progress.viewedRewardIds.contains(cardId)) {
-            progress
-        } else {
-            progress.copy(viewedRewardIds = progress.viewedRewardIds + cardId)
-        }
+    fun markViewed(
+        progress: GameProgress,
+        cardId: String,
+    ): GameProgress = if (!progress.newRewardIds.contains(cardId) || progress.viewedRewardIds.contains(cardId)) {
+        progress
+    } else {
+        progress.copy(viewedRewardIds = progress.viewedRewardIds + cardId)
+    }
 }

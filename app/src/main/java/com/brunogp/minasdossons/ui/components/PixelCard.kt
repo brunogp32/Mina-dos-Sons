@@ -20,7 +20,8 @@ fun PixelCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
-        modifier = modifier
+        modifier =
+        modifier
             .shadow(5.dp, RoundedCornerShape(8.dp))
             .border(3.dp, Color(0xFF5D4037), RoundedCornerShape(8.dp))
             .background(color, RoundedCornerShape(8.dp))

@@ -1,0 +1,134 @@
+name: Android Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Signed Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Java
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          validate-wrappers: true
+
+      - name: Check release signing secrets
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          if [[ -z "${ANDROID_KEYSTORE_BASE64}" || -z "${ANDROID_KEYSTORE_PASSWORD}" || -z "${ANDROID_KEY_ALIAS}" || -z "${ANDROID_KEY_PASSWORD}" ]]; then
+            echo "Release signing secrets are not configured. Refusing to publish an unsigned or debug release." | tee build/reports/ci/release-blocked.log
+            exit 1
+          fi
+
+      - name: Resolve release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          VERSION_NAME="$(grep -E 'versionName = ' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')"
+          if [[ -z "${VERSION_NAME}" ]]; then
+            echo "Could not resolve versionName from Gradle." | tee build/reports/ci/release-version.log
+            exit 1
+          fi
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "v${VERSION_NAME}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match versionName ${VERSION_NAME}." | tee build/reports/ci/release-version.log
+            exit 1
+          fi
+          {
+            echo "VERSION_NAME=${VERSION_NAME}"
+            echo "APK_NAME=Mina-dos-Sons-v${VERSION_NAME}.apk"
+            echo "AAB_NAME=Mina-dos-Sons-v${VERSION_NAME}.aab"
+          } >> "${GITHUB_ENV}"
+          echo "Resolved version ${VERSION_NAME}" | tee build/reports/ci/release-version.log
+
+      - name: Test and build release
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          KEYSTORE_PATH="${RUNNER_TEMP}/mina-dos-sons-release.jks"
+          trap 'rm -f "${KEYSTORE_PATH}"' EXIT
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "${KEYSTORE_PATH}"
+          ./gradlew clean testReleaseUnitTest lintRelease assembleRelease bundleRelease \
+            -Pandroid.injected.signing.store.file="${KEYSTORE_PATH}" \
+            -Pandroid.injected.signing.store.password="${ANDROID_KEYSTORE_PASSWORD}" \
+            -Pandroid.injected.signing.key.alias="${ANDROID_KEY_ALIAS}" \
+            -Pandroid.injected.signing.key.password="${ANDROID_KEY_PASSWORD}" \
+            --no-daemon --stacktrace 2>&1 | tee build/reports/ci/release-build.log
+          APK="$(find app/build/outputs/apk/release -name '*.apk' | head -n 1)"
+          AAB="$(find app/build/outputs/bundle/release -name '*.aab' | head -n 1)"
+          if [[ -z "${APK}" || "${APK}" == *debug* || "${APK}" == *unsigned* ]]; then
+            echo "Release APK is missing, debug or unsigned: ${APK}" | tee build/reports/ci/release-apk-validation.log
+            exit 1
+          fi
+          if [[ -z "${AAB}" ]]; then
+            echo "Release AAB is missing." | tee build/reports/ci/release-apk-validation.log
+            exit 1
+          fi
+          "${ANDROID_HOME}/build-tools/$(ls "${ANDROID_HOME}/build-tools" | sort -V | tail -n 1)/apksigner" verify --verbose --print-certs "${APK}" \
+            | tee build/reports/ci/apksigner.log
+          sha256sum "${APK}" "${AAB}" | tee SHA256SUMS
+          cp "${APK}" "${APK_NAME}"
+          cp "${AAB}" "${AAB_NAME}"
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            "${APK_NAME}" \
+            "${AAB_NAME}" \
+            SHA256SUMS \
+            THIRD_PARTY_NOTICES.md \
+            ASSET_LICENSES.md \
+            --title "Mina dos Sons ${GITHUB_REF_NAME}" \
+            --notes-file RELEASE_NOTES.md
+
+      - name: Upload release diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-diagnostics-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            build/reports/ci/**
+            app/build/reports/**
+            app/build/outputs/**
+            SHA256SUMS

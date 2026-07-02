@@ -29,8 +29,8 @@ class AudioAndRecordingTest {
 
     @Test
     fun repositoryPrefersBundledRawThenFallback() {
-        assertEquals("raw", ReferenceAudioRepository.preferredSourceKind(hasCustomModel = false, rawResourceId = 12))
-        assertEquals("fallback", ReferenceAudioRepository.preferredSourceKind(hasCustomModel = false, rawResourceId = 0))
+        assertEquals("raw", ReferenceAudioRepository.preferredSourceKind(rawResourceId = 12))
+        assertEquals("fallback", ReferenceAudioRepository.preferredSourceKind(rawResourceId = 0))
     }
 
     @Test
@@ -54,13 +54,14 @@ class AudioAndRecordingTest {
 
     @Test
     fun recorderStatesExistInExpectedFlow() {
-        val flow = listOf(
-            RecorderUiState.Idle,
-            RecorderUiState.Preparing,
-            RecorderUiState.Recording,
-            RecorderUiState.Saving,
-            RecorderUiState.Recorded,
-        )
+        val flow =
+            listOf(
+                RecorderUiState.Idle,
+                RecorderUiState.Preparing,
+                RecorderUiState.Recording,
+                RecorderUiState.Saving,
+                RecorderUiState.Recorded,
+            )
         assertEquals(RecorderUiState.Idle, flow.first())
         assertEquals(RecorderUiState.Recorded, flow.last())
     }

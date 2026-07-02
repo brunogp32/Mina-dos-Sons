@@ -1,0 +1,200 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Java
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          validate-wrappers: true
+
+      - name: Validate wrapper permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          git ls-files --stage gradlew | tee build/reports/ci/wrapper-mode.log
+          test -x gradlew
+          git ls-files --stage gradlew | grep '^100755 '
+
+      - name: Quality checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          ./gradlew --version --no-daemon --stacktrace 2>&1 | tee build/reports/ci/gradle-version.log
+          ./gradlew ktlintCheck detekt --no-daemon --stacktrace 2>&1 | tee build/reports/ci/quality.log
+          python tools/audit_pt_pt.py 2>&1 | tee build/reports/ci/pt-pt-audit.log
+          if grep -R "android.permission.INTERNET" app/src/main/AndroidManifest.xml app/src/main/res; then
+            echo "Forbidden INTERNET permission found." | tee build/reports/ci/internet-permission.log
+            exit 1
+          fi
+          ! find . -type f \( -name "*.jks" -o -name "*.keystore" -o -name "*.p12" -o -name "*.pem" -o -name "*.base64" -o -iname "*keystore*.txt" -o -name "release-signing.properties" -o -name "keystore.properties" -o -name "*.apk" -o -name "*.aab" \) \
+            -not -path "./app/build/*" -not -path "./build/*" -not -path "./.gradle/*" -not -path "./dist/*" | tee build/reports/ci/forbidden-files.log | grep .
+
+      - name: Upload quality reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: quality-reports-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            build/reports/ci/**
+            app/build/reports/detekt/**
+            app/build/reports/spotless/**
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Java
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          validate-wrappers: true
+
+      - name: Unit tests and coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          ./gradlew testDebugUnitTest koverHtmlReport --no-daemon --stacktrace 2>&1 | tee build/reports/ci/unit-tests.log
+
+      - name: Upload unit reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: unit-test-reports-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            build/reports/ci/**
+            app/build/test-results/**
+            app/build/reports/tests/**
+            app/build/reports/kover/**
+
+  lint-build:
+    name: Lint And Debug Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Java
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          validate-wrappers: true
+
+      - name: Lint and assemble debug
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          ./gradlew lintDebug assembleDebug --no-daemon --stacktrace 2>&1 | tee build/reports/ci/lint-build.log
+          test -f "app/build/outputs/apk/debug/Mina dos Sons.apk"
+
+      - name: Upload lint and debug APK
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lint-build-reports-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            build/reports/ci/**
+            app/build/reports/**
+            app/build/outputs/lint-results*
+            app/build/outputs/apk/debug/*.apk
+
+  instrumented-tests:
+    name: Instrumented Tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Java
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          validate-wrappers: true
+
+      - name: Enable KVM for Android emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -e /dev/kvm ]]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "/dev/kvm is not available on this runner."
+            exit 1
+          fi
+
+      - name: Run managed device tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/ci
+          ./gradlew pixel2Api35DebugAndroidTest --no-daemon --stacktrace 2>&1 | tee build/reports/ci/instrumented-tests.log
+
+      - name: Upload instrumented reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: instrumented-test-reports-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            build/reports/ci/**
+            app/build/reports/androidTests/**
+            app/build/outputs/androidTest-results/**

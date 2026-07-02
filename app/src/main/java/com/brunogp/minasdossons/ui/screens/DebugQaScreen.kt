@@ -15,7 +15,10 @@ import com.brunogp.minasdossons.ui.components.BlockButton
 import com.brunogp.minasdossons.ui.components.PixelCard
 
 @Composable
-fun DebugQaScreen(vm: AppViewModel, nav: NavController) {
+fun DebugQaScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val progress by vm.progress.collectAsState()
     val owned = CardCatalog.normalizeOwnedIds(progress.ownedRewardIds)
     MineScreen {
@@ -30,7 +33,9 @@ fun DebugQaScreen(vm: AppViewModel, nav: NavController) {
         BlockButton("Executar verificação rápida", { }, color = Color(0xFF4A90A4))
         BlockButton("Dar 100 diamantes de teste", { vm.addParentDiamonds() }, color = Color(0xFFD6A22A))
         ChestType.entries.forEach { chest ->
-            BlockButton("Testar ${chest.label}", { vm.save(progress.copy(unopenedChests = progress.unopenedChests + chest)) }, color = Color(0xFF8B6BB1))
+            BlockButton("Testar ${chest.label}", {
+                vm.save(progress.copy(unopenedChests = progress.unopenedChests + chest))
+            }, color = Color(0xFF8B6BB1))
         }
         BlockButton("Abrir cartas", { nav.navigate("cards") }, color = Color(0xFFD6A22A))
         BackButton(nav)

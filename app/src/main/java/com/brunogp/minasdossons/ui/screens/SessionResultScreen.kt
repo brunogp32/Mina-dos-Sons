@@ -14,7 +14,13 @@ import com.brunogp.minasdossons.ui.components.BlockProgressBar
 import com.brunogp.minasdossons.ui.components.PixelCard
 
 @Composable
-fun SessionResultScreen(vm: AppViewModel, nav: NavController, stars: Int, world: Int, level: Int) {
+fun SessionResultScreen(
+    vm: AppViewModel,
+    nav: NavController,
+    stars: Int,
+    world: Int,
+    level: Int,
+) {
     val progress by vm.progress.collectAsState()
     MineScreen {
         ScreenTitle("Treino completo", vm.rewardEngine.message(stars))

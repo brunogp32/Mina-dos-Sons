@@ -39,6 +39,7 @@ data class GameProgress(
     val completedWorldsForRewards: Set<Int> = emptySet(),
     val allUnlockedByParent: Boolean = false,
     val ttsEnabled: Boolean = true,
+    val allowPortugueseVoiceFallback: Boolean = false,
     val slowVoice: Boolean = false,
     val largeText: Boolean = false,
     val easyMode: Boolean = true,

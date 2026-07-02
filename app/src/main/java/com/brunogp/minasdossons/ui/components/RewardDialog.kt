@@ -5,7 +5,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
 @Composable
-fun RewardDialog(message: String, sticker: String?, onDismiss: () -> Unit) {
+fun RewardDialog(
+    message: String,
+    sticker: String?,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { BlockButton("Boa!", onDismiss) },

@@ -18,7 +18,10 @@ import com.brunogp.minasdossons.ui.components.BlockButton
 import com.brunogp.minasdossons.ui.components.PixelCard
 
 @Composable
-fun ThroatTrainingScreen(vm: AppViewModel, nav: NavController) {
+fun ThroatTrainingScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val progress by vm.progress.collectAsState()
     MineScreen {
         ScreenTitle("Sente a garganta", "Põe dois dedos suavemente na garganta.")
@@ -62,7 +65,12 @@ fun ThroatTrainingScreen(vm: AppViewModel, nav: NavController) {
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BlockButton("Começar treino", { nav.navigate("game/${progress.currentWorld}/2") }, Modifier.weight(1f), color = Color(0xFFD6A22A))
+            BlockButton(
+                "Começar treino",
+                { nav.navigate("game/${progress.currentWorld}/2") },
+                Modifier.weight(1f),
+                color = Color(0xFFD6A22A),
+            )
             BlockButton("Ouvir S/Z", { vm.playTextOrReference("SSSS ZZZZ") }, Modifier.weight(1f), color = Color(0xFF4A90A4))
         }
         BackButton(nav)
@@ -70,7 +78,12 @@ fun ThroatTrainingScreen(vm: AppViewModel, nav: NavController) {
 }
 
 @Composable
-private fun TutorialStep(title: String, sound: String, text: String, button: () -> Unit) {
+private fun TutorialStep(
+    title: String,
+    sound: String,
+    text: String,
+    button: () -> Unit,
+) {
     PixelCard {
         Text(title, fontSize = 22.sp, fontWeight = FontWeight.Black)
         Text(sound, fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color(0xFF4A90A4))

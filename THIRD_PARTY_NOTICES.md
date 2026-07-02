@@ -4,5 +4,5 @@ O código original de Mina dos Sons está licenciado sob MIT. Assets de terceiro
 
 Assets usados:
 
-- `Pixel Chest Pack`: frames de baús otimizados para WebP. O utilizador confirmou autorização de uso neste projeto educativo e sem fins lucrativos.
+- `Pixel Chest Pack`, por karsiori: frames de baús otimizados para WebP. A página pública declara licença Creative Commons Zero v1.0 Universal (CC0): https://karsiori.itch.io/pixel-art-chest-pack-animated
 - `sounds/ssss.m4a`, `sounds/zzzz.m4a`, `sounds/x-ch.m4a`, `sounds/jjjj.m4a`: copiados para `res/raw` como sons modelo oficiais.

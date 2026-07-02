@@ -8,9 +8,10 @@ A licença MIT em `LICENSE` aplica-se apenas ao código original e à documenta�
 
 - Uso: quatro conjuntos de frames para baús de Madeira, Ferro, Ouro e Cristal.
 - Origem: `design_sources/Pixel Chest Pack`.
+- Página pública: https://karsiori.itch.io/pixel-art-chest-pack-animated
 - Saída: ficheiros WebP `chest_*.webp` em `app/src/main/res/drawable-nodpi`.
-- Ficheiro de licença local: não encontrado nesta cópia.
-- Base de uso: autorização indicada pelo utilizador para este projeto educativo e sem fins lucrativos.
+- Licença declarada na página pública: Creative Commons Zero v1.0 Universal (CC0).
+- Autor: karsiori.
 - Transformação: seleção de frames, recorte/alinhamento e conversão para WebP.
 
 ### Áudios S/Z/X/J

@@ -22,7 +22,10 @@ import com.brunogp.minasdossons.ui.components.FourSecondRecorder
 import com.brunogp.minasdossons.ui.components.PixelCard
 
 @Composable
-fun RecordingScreen(vm: AppViewModel, nav: NavController) {
+fun RecordingScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val progress by vm.progress.collectAsState()
     var selected by remember { mutableStateOf(LocalGameData.targets.first()) }
     var prompt by remember { mutableStateOf(selected.displaySound) }

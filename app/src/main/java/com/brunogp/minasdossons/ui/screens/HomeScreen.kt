@@ -19,7 +19,10 @@ import com.brunogp.minasdossons.ui.components.PixelCard
 import com.brunogp.minasdossons.ui.components.TopGameBar
 
 @Composable
-fun HomeScreen(vm: AppViewModel, nav: NavController) {
+fun HomeScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val progress by vm.progress.collectAsState()
     val ownedCards = CardCatalog.normalizeOwnedIds(progress.ownedRewardIds).size
     val totalCards = CardCatalog.cards.size

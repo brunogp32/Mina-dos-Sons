@@ -4,8 +4,8 @@ import com.brunogp.minasdossons.audio.ReferenceSound
 import com.brunogp.minasdossons.data.GameProgress
 import com.brunogp.minasdossons.data.cards.CardCatalog
 import com.brunogp.minasdossons.data.cards.CardPurchaseResult
-import com.brunogp.minasdossons.data.cards.CardRepository
 import com.brunogp.minasdossons.data.cards.CardRarity
+import com.brunogp.minasdossons.data.cards.CardRepository
 import com.brunogp.minasdossons.data.cards.SoundFocus
 import com.brunogp.minasdossons.data.rewards.ChestRewardEngine
 import com.brunogp.minasdossons.data.rewards.ChestType
@@ -58,8 +58,14 @@ class CardSystemTest {
     @Test
     fun purchaseRejectsMissingOwnedAndInsufficientCases() {
         val card = CardCatalog.cards.first { it.price > 20 }
-        assertEquals(CardPurchaseResult.InsufficientDiamonds, CardRepository.purchase(GameProgress(diamondBalance = card.price - 1), card.id))
-        assertEquals(CardPurchaseResult.AlreadyOwned, CardRepository.purchase(GameProgress(diamondBalance = 999, ownedRewardIds = setOf(card.id)), card.id))
+        assertEquals(
+            CardPurchaseResult.InsufficientDiamonds,
+            CardRepository.purchase(GameProgress(diamondBalance = card.price - 1), card.id),
+        )
+        assertEquals(
+            CardPurchaseResult.AlreadyOwned,
+            CardRepository.purchase(GameProgress(diamondBalance = 999, ownedRewardIds = setOf(card.id)), card.id),
+        )
         assertEquals(CardPurchaseResult.InvalidCard, CardRepository.purchase(GameProgress(diamondBalance = 999), "missing"))
         assertEquals(CardPurchaseResult.InProgress, CardRepository.purchase(GameProgress(diamondBalance = 999), card.id, inProgress = true))
     }

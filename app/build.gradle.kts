@@ -2,6 +2,9 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("io.gitlab.arturbosch.detekt")
+    id("com.diffplug.spotless")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 android {
@@ -12,8 +15,8 @@ android {
         applicationId = "com.brunogp.minasdossons"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -24,7 +27,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -43,6 +46,18 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        managedDevices {
+            localDevices {
+                create("pixel2Api35") {
+                    device = "Pixel 2"
+                    apiLevel = 35
+                    systemImageSource = "aosp-atd"
+                }
+            }
+        }
+    }
+
     applicationVariants.all {
         outputs.all {
             if (buildType.name == "debug") {
@@ -57,7 +72,37 @@ tasks.register<Copy>("copyDebugApkToDist") {
     dependsOn("assembleDebug")
     from(layout.buildDirectory.file("outputs/apk/debug/Mina dos Sons.apk"))
     into(rootProject.layout.projectDirectory.dir("dist"))
-    rename { "Mina dos Sons-v1.0.0.apk" }
+    rename { "Mina-dos-Sons-v1.1.0-debug.apk" }
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint().editorConfigOverride(
+            mapOf(
+                "max_line_length" to "off",
+            ),
+        )
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint().editorConfigOverride(
+            mapOf(
+                "max_line_length" to "off",
+            ),
+        )
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+    parallel = true
+    source.setFrom("src/main/java", "src/test/java")
 }
 
 dependencies {
@@ -73,5 +118,10 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("junit:junit:4.13.2")
 }

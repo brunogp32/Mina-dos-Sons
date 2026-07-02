@@ -1,25 +1,28 @@
 package com.brunogp.minasdossons
 
 import android.app.Application
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.brunogp.minasdossons.audio.AudioCoordinator
 import com.brunogp.minasdossons.audio.AudioPlayer
 import com.brunogp.minasdossons.audio.AudioRecorder
 import com.brunogp.minasdossons.audio.ReferenceAudioPlayer
 import com.brunogp.minasdossons.audio.ReferenceAudioRepository
-import com.brunogp.minasdossons.audio.ReferenceSound
 import com.brunogp.minasdossons.audio.SpeechHelper
-import com.brunogp.minasdossons.data.cards.CardItem
-import com.brunogp.minasdossons.data.cards.CardPurchaseResult
-import com.brunogp.minasdossons.data.cards.CardRepository
+import com.brunogp.minasdossons.audio.TtsPreferences
+import com.brunogp.minasdossons.audio.TtsState
 import com.brunogp.minasdossons.data.GameProgress
 import com.brunogp.minasdossons.data.MinimalPair
 import com.brunogp.minasdossons.data.ProgressRepository
-import com.brunogp.minasdossons.data.rewards.ChestRewardEngine
+import com.brunogp.minasdossons.data.cards.CardItem
+import com.brunogp.minasdossons.data.cards.CardPurchaseResult
+import com.brunogp.minasdossons.data.cards.CardRepository
 import com.brunogp.minasdossons.data.rewards.ChestOpeningResult
+import com.brunogp.minasdossons.data.rewards.ChestRewardEngine
 import com.brunogp.minasdossons.data.rewards.ChestType
 import com.brunogp.minasdossons.data.rewards.DiamondRepository
 import com.brunogp.minasdossons.data.rewards.DiamondTransactionType
@@ -29,9 +32,8 @@ import com.brunogp.minasdossons.navigation.AppNavGraph
 import com.brunogp.minasdossons.ui.theme.MinasDosSonsTheme
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -45,7 +47,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-class AppViewModel(application: Application) : AndroidViewModel(application) {
+class AppViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val repository = ProgressRepository(application)
     val gameEngine = GameEngine()
     val rewardEngine = RewardEngine()
@@ -55,76 +59,97 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val player = AudioPlayer()
     val referenceAudioRepository = ReferenceAudioRepository(application)
     val referenceAudioPlayer = ReferenceAudioPlayer(application, referenceAudioRepository)
-    private var referenceSequenceJob: Job? = null
+    private val audioCoordinator = AudioCoordinator(viewModelScope, speech, referenceAudioPlayer, player)
+    val ttsState: StateFlow<TtsState> = speech.ttsState
 
-    val progress: StateFlow<GameProgress> = repository.progress.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5_000),
-        GameProgress(),
-    )
+    val progress: StateFlow<GameProgress> =
+        repository.progress.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            GameProgress(),
+        )
+
+    init {
+        viewModelScope.launch {
+            val current = progress.first()
+            val migrated = recorder.migrateProgress(current)
+            if (migrated != current) {
+                repository.saveProgress(migrated)
+            }
+            speech.refresh(migrated.ttsPreferences())
+        }
+    }
 
     fun save(progress: GameProgress) {
         viewModelScope.launch { repository.saveProgress(progress) }
     }
 
     fun playTextOrReference(text: String) {
-        referenceSequenceJob?.cancel()
-        val reference = ReferenceSound.fromDisplayText(text)
-        if (reference != null) {
-            referenceAudioPlayer.playReferenceSound(reference)
-            return
-        }
-        val soundsInText = ReferenceSound.entries
-            .mapNotNull { sound ->
-                val index = text.indexOf(sound.displayText, ignoreCase = true)
-                if (index >= 0) index to sound else null
-            }
-            .sortedBy { it.first }
-            .map { it.second }
-        if (soundsInText.isNotEmpty()) {
-            referenceSequenceJob = viewModelScope.launch {
-                soundsInText.forEachIndexed { index, sound ->
-                    if (index > 0) delay(1_050L)
-                    referenceAudioPlayer.playReferenceSound(sound)
-                }
-            }
-            return
-        }
-        speech.speak(text, progress.value.slowVoice, progress.value.ttsEnabled)
+        audioCoordinator.playTextOrReference(text, progress.value.slowVoice, progress.value.ttsPreferences())
+    }
+
+    fun playReferenceSound(sound: com.brunogp.minasdossons.audio.ReferenceSound) {
+        audioCoordinator.playTextOrReference(sound.displayText, progress.value.slowVoice, progress.value.ttsPreferences())
+    }
+
+    fun playRecording(file: java.io.File?) {
+        stopExerciseAudio()
+        player.play(file)
+    }
+
+    fun refreshPortugueseVoice() {
+        speech.refresh(progress.value.ttsPreferences())
+    }
+
+    fun testPortugueseVoice() {
+        speech.speak("A mina dos sons está pronta.", progress.value.slowVoice, progress.value.ttsPreferences())
+    }
+
+    fun installPortugueseVoice() {
+        getApplication<Application>().startActivity(
+            speech.installVoiceDataIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
     }
 
     fun stopExerciseAudio() {
-        referenceSequenceJob?.cancel()
-        referenceSequenceJob = null
-        referenceAudioPlayer.stop()
-        player.stop()
-        speech.stop()
+        audioCoordinator.stopAll()
     }
 
-    fun completeSession(world: Int, level: Int, stars: Int) {
+    fun completeSession(
+        world: Int,
+        level: Int,
+        stars: Int,
+    ) {
         viewModelScope.launch {
             val trained = repository.recordTrainingDay(progress.value)
             val sticker = rewardEngine.nextSticker(trained.stickersUnlocked)
             val progressed = gameEngine.progressAfterSession(trained, world, level, stars)
             val withDiamonds = DiamondRepository.rewardSession(progressed, stars, world, level)
-            val updated = CardRepository.migrateLegacyRewards(
-                withDiamonds.copy(
-                    stickersUnlocked = trained.stickersUnlocked + listOfNotNull(sticker),
-                    unopenedChests = withDiamonds.unopenedChests + ChestType.fromStars(stars),
+            val updated =
+                CardRepository.migrateLegacyRewards(
+                    withDiamonds.copy(
+                        stickersUnlocked = trained.stickersUnlocked + listOfNotNull(sticker),
+                        unopenedChests = withDiamonds.unopenedChests + ChestType.fromStars(stars),
+                    ),
                 )
-            )
             repository.saveProgress(updated)
         }
     }
 
-    fun addRecording(targetId: String, recordingName: String = progress.value.lastRecordingName, recordingPath: String = progress.value.lastRecordingPath) {
+    fun addRecording(
+        targetId: String,
+        recordingName: String = progress.value.lastRecordingName,
+        recordingPath: String = progress.value.lastRecordingPath,
+    ) {
         val p = progress.value
-        val withRecording = p.copy(
+        val withRecording =
+            p.copy(
                 recordingsCount = p.recordingsCount + 1,
                 soundStats = p.soundStats + (targetId to ((p.soundStats[targetId] ?: 0) + 1)),
                 lastRecordingName = recordingName,
                 lastRecordingPath = recordingPath,
-                recordingsByName = if (recordingName.isNotBlank() && recordingPath.isNotBlank()) {
+                recordingsByName =
+                if (recordingName.isNotBlank() && recordingPath.isNotBlank()) {
                     p.recordingsByName + (recordingName to recordingPath)
                 } else {
                     p.recordingsByName
@@ -133,38 +158,50 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         save(DiamondRepository.rewardNewWordRecording(withRecording, recordingName))
     }
 
-    fun rememberLastRecording(name: String, path: String) {
+    fun rememberLastRecording(
+        name: String,
+        path: String,
+    ) {
         val p = progress.value
         save(
             p.copy(
                 lastRecordingName = name,
                 lastRecordingPath = path,
                 recordingsByName = if (name.isNotBlank() && path.isNotBlank()) p.recordingsByName + (name to path) else p.recordingsByName,
-            )
+            ),
         )
     }
 
-    fun addCustomMinimalPair(wordA: String, wordB: String, targetA: String, targetB: String) {
+    fun addCustomMinimalPair(
+        wordA: String,
+        wordB: String,
+        targetA: String,
+        targetB: String,
+    ) {
         val cleanA = wordA.trim().lowercase()
         val cleanB = wordB.trim().lowercase()
         if (cleanA.isBlank() || cleanB.isBlank()) return
-        val pair = MinimalPair(
-            id = "custom-${targetA}-${targetB}-${cleanA}-${cleanB}-${System.currentTimeMillis()}",
-            wordA = cleanA,
-            wordB = cleanB,
-            targetA = targetA,
-            targetB = targetB,
-            hint = "Par adicionado no Modo Pais",
-            isCommonPortuguese = true,
-            editable = true,
-        )
+        val pair =
+            MinimalPair(
+                id = "custom-$targetA-$targetB-$cleanA-$cleanB-${System.currentTimeMillis()}",
+                wordA = cleanA,
+                wordB = cleanB,
+                targetA = targetA,
+                targetB = targetB,
+                hint = "Par adicionado no Modo Pais",
+                isCommonPortuguese = true,
+                editable = true,
+            )
         val p = progress.value
         save(p.copy(customMinimalPairs = p.customMinimalPairs + pair))
     }
 
     fun unlockAll() = save(progress.value.copy(unlockedWorlds = (1..10).toSet(), allUnlockedByParent = true))
+
     fun lockByProgress() = save(progress.value.copy(unlockedWorlds = setOf(1), allUnlockedByParent = false, currentWorld = 1, currentLevel = 1))
+
     fun reset() = viewModelScope.launch { repository.reset() }
+
     fun addParentDiamonds() = save(DiamondRepository.addTransaction(progress.value, 100, DiamondTransactionType.PARENT_ADJUSTMENT, "Ferramenta dos pais"))
 
     fun openNextChest(): ChestType? {
@@ -183,11 +220,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openChestPreview(chest: ChestType) = chestRewardEngine.openChest(progress.value, chest)
 
-    fun buyCard(card: CardItem): Boolean {
-        return purchaseCard(card.id) is CardPurchaseResult.Success
-    }
+    fun buyCard(card: CardItem): Boolean = purchaseCard(card.id) is CardPurchaseResult.Success
 
-    fun purchaseCard(cardId: String, inProgress: Boolean = false): CardPurchaseResult {
+    fun purchaseCard(
+        cardId: String,
+        inProgress: Boolean = false,
+    ): CardPurchaseResult {
         val result = CardRepository.purchase(CardRepository.migrateLegacyRewards(progress.value), cardId, inProgress)
         if (result is CardPurchaseResult.Success) save(result.progress)
         return result
@@ -198,11 +236,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
-        referenceSequenceJob?.cancel()
-        speech.shutdown()
+        audioCoordinator.release()
         recorder.stop()
-        player.stop()
-        referenceAudioPlayer.stop()
         super.onCleared()
     }
 }
+
+private fun GameProgress.ttsPreferences(): TtsPreferences = TtsPreferences(
+    enabled = ttsEnabled,
+    allowPortugueseFallback = allowPortugueseVoiceFallback,
+)

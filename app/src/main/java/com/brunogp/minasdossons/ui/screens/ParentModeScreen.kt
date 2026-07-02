@@ -3,6 +3,7 @@ package com.brunogp.minasdossons.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -35,8 +36,12 @@ import java.time.ZoneId
 import kotlin.random.Random
 
 @Composable
-fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
+fun ParentModeScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val progress by vm.progress.collectAsState()
+    val tts by vm.ttsState.collectAsState()
     val challenge = remember { Random.nextInt(2, 10) to Random.nextInt(2, 10) }
     val challengeAnswer = challenge.first * challenge.second
     var answer by remember { mutableStateOf("") }
@@ -48,6 +53,7 @@ fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
     var pairStatus by remember { mutableStateOf("") }
     var recordingFilter by remember { mutableStateOf("Todas") }
     var recordingSearch by remember { mutableStateOf("") }
+    var confirmReset by remember { mutableStateOf(false) }
     val allPairs = LocalGameData.minimalPairs + progress.customMinimalPairs
 
     MineScreen {
@@ -55,9 +61,15 @@ fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
         if (!unlocked) {
             PixelCard {
                 Text("Quanto é ${challenge.first} × ${challenge.second}?", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                OutlinedTextField(answer, { answer = it }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), label = { Text("Resposta") })
+                OutlinedTextField(answer, {
+                    answer = it
+                }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), label = { Text("Resposta") })
                 BlockButton("Entrar", { unlocked = answer.trim() == challengeAnswer.toString() })
-                if (answer.isNotBlank() && answer.trim() != challengeAnswer.toString()) Text("Quase! Tenta outra vez.", color = Color(0xFF2F7D32))
+                if (answer.isNotBlank() &&
+                    answer.trim() != challengeAnswer.toString()
+                ) {
+                    Text("Quase! Tenta outra vez.", color = Color(0xFF2F7D32))
+                }
             }
             BackButton(nav)
             return@MineScreen
@@ -70,7 +82,15 @@ fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
             Text("Treinar primeiro o som e só depois a letra, com atenção à vibração da garganta.", fontSize = 17.sp)
             Text("S /s/ e CH /ʃ/ são sons sem voz. Z /z/ e J /ʒ/ são sons com voz.", fontSize = 16.sp)
             Text("Neste jogo, X representa o som /ʃ/, como em xarope e peixe.", fontSize = 16.sp)
-            Text("Esta aplicação apoia o treino, mas não substitui um terapeuta da fala.", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Esta aplicação apoia o treino, mas não substitui um terapeuta da fala.",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        ParentTtsCard(vm, tts.message, tts.selectedVoice?.displayLanguage, tts.selectedVoice?.name, tts.selectedVoice?.requiresNetwork, progress.allowPortugueseVoiceFallback) {
+            vm.save(progress.copy(allowPortugueseVoiceFallback = it))
+            vm.refreshPortugueseVoice()
         }
         PixelCard {
             Text("Sons oficiais", fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -78,13 +98,21 @@ fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
             ReferenceSound.entries.forEach { sound ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("${sound.displayText} ${sound.phoneme}", fontSize = 17.sp, modifier = Modifier.weight(1f))
-                    BlockButton("Ouvir", { vm.referenceAudioPlayer.playReferenceSound(sound) }, Modifier.weight(1f), color = Color(0xFF4A90A4))
+                    BlockButton(
+                        "Ouvir",
+                        { vm.playReferenceSound(sound) },
+                        Modifier.weight(1f),
+                        color = Color(0xFF4A90A4),
+                    )
                 }
             }
         }
         PixelCard {
             Text("Progresso detalhado", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("Estrelas: ${progress.totalStars} | Sessões: ${progress.completedSessions} | Gravações: ${progress.recordingsCount}", fontSize = 17.sp)
+            Text(
+                "Estrelas: ${progress.totalStars} | Sessões: ${progress.completedSessions} | Gravações: ${progress.recordingsCount}",
+                fontSize = 17.sp,
+            )
             Text("Mundo ${progress.currentWorld}, nível ${progress.currentLevel}", fontSize = 17.sp)
             Text("Cartas: ${CardCatalog.normalizeOwnedIds(progress.ownedRewardIds).size}/${CardCatalog.cards.size}", fontSize = 17.sp)
             Text("Diamantes: ${progress.diamondBalance}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -98,7 +126,7 @@ fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
             BlockButton("Desbloquear tudo", { vm.unlockAll() }, Modifier.weight(1f), color = Color(0xFFD6A22A))
             BlockButton("Bloquear por progresso", { vm.lockByProgress() }, Modifier.weight(1f), color = Color(0xFF607D8B))
         }
-        BlockButton("Reiniciar progresso", { vm.reset() }, color = Color(0xFFD24D57))
+        BlockButton("Reiniciar progresso", { confirmReset = true }, color = Color(0xFFD24D57))
         PixelCard {
             Text("Sons a treinar", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             LocalGameData.targets.forEach { target ->
@@ -112,8 +140,32 @@ fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
             Text("Adicionar par mínimo", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text("Estes pares entram aleatoriamente nas perguntas do jogo.", fontSize = 16.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BlockButton("S / Z", { pairType = "s-z" }, Modifier.weight(1f), color = if (pairType == "s-z") Color(0xFFD6A22A) else Color(0xFF5AA469))
-                BlockButton("CH / J", { pairType = "x-j" }, Modifier.weight(1f), color = if (pairType == "x-j") Color(0xFFD6A22A) else Color(0xFF4A90A4))
+                BlockButton(
+                    "S / Z",
+                    { pairType = "s-z" },
+                    Modifier.weight(1f),
+                    color =
+                    if (pairType ==
+                        "s-z"
+                    ) {
+                        Color(0xFFD6A22A)
+                    } else {
+                        Color(0xFF5AA469)
+                    },
+                )
+                BlockButton(
+                    "CH / J",
+                    { pairType = "x-j" },
+                    Modifier.weight(1f),
+                    color =
+                    if (pairType ==
+                        "x-j"
+                    ) {
+                        Color(0xFFD6A22A)
+                    } else {
+                        Color(0xFF4A90A4)
+                    },
+                )
             }
             OutlinedTextField(wordA, { wordA = it }, label = { Text(if (pairType == "s-z") "Palavra com S" else "Palavra com CH/X") })
             OutlinedTextField(wordB, { wordB = it }, label = { Text(if (pairType == "s-z") "Palavra com Z" else "Palavra com J") })
@@ -136,7 +188,12 @@ fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
             Text("${ChestType.IRON.label}: Bronze, Prata e Ouro", fontSize = 15.sp)
             Text("${ChestType.GOLD.label}: Prata, Ouro e Cristal", fontSize = 15.sp)
             Text("${ChestType.CRYSTAL.label}: Ouro, Cristal e Arco-íris", fontSize = 15.sp)
-            CardRarity.entries.forEach { Text("${it.shortLabel}: ${it.priceRange.first}-${it.priceRange.last} diamantes", fontSize = 14.sp) }
+            CardRarity.entries.forEach {
+                Text(
+                    "${it.shortLabel}: ${it.priceRange.first}-${it.priceRange.last} diamantes",
+                    fontSize = 14.sp,
+                )
+            }
         }
         PixelCard {
             Text("Últimas transações", fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -149,6 +206,30 @@ fun ParentModeScreen(vm: AppViewModel, nav: NavController) {
         }
         BackButton(nav)
     }
+
+    if (confirmReset) {
+        ResetProgressDialog(
+            onDismiss = { confirmReset = false },
+            onConfirm = {
+                confirmReset = false
+                vm.reset()
+            },
+        )
+    }
+}
+
+@Composable
+private fun ResetProgressDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Reiniciar progresso?") },
+        text = { Text("Esta ação reinicia estrelas, mundos, diamantes, cartas e baús. As gravações devem ser apagadas separadamente numa versão própria dessa ferramenta.") },
+        confirmButton = { BlockButton("Sim, reiniciar", onConfirm, color = Color(0xFFD24D57)) },
+        dismissButton = { BlockButton("Cancelar", onDismiss, color = Color(0xFF607D8B)) },
+    )
 }
 
 @Composable
@@ -167,44 +248,78 @@ private fun RecordingListCard(
                 BlockButton(it, { onFilter(it) }, Modifier.weight(1f), color = if (filter == it) Color(0xFFD6A22A) else Color(0xFF607D8B))
             }
         }
-        val filtered = recordings.filter { (name, _) ->
-            (search.isBlank() || name.contains(search, ignoreCase = true)) && (filter == "Todas" || groupForRecording(name) == filter)
-        }
+        val filtered =
+            recordings.filter { (name, _) ->
+                (search.isBlank() || name.contains(search, ignoreCase = true)) && (filter == "Todas" || groupForRecording(name) == filter)
+            }
         if (filtered.isEmpty()) {
             Text("Ainda não há gravações neste filtro.", fontSize = 17.sp)
         } else {
             filtered.toSortedMap().forEach { (name, path) ->
                 val file = File(path)
-                val date = recordingDates[name] ?: runCatching {
-                    Instant.ofEpochMilli(file.lastModified()).atZone(ZoneId.systemDefault()).toLocalDate().toString()
-                }.getOrDefault("")
+                val date =
+                    recordingDates[name] ?: runCatching {
+                        Instant
+                            .ofEpochMilli(file.lastModified())
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+                            .toString()
+                    }.getOrDefault("")
                 Text("$name - ${groupForRecording(name)} - Gravado", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Text(date, fontSize = 13.sp)
-                BlockButton("Ouvir $name", { vm.player.play(file) }, color = Color(0xFF4A90A4))
+                BlockButton("Ouvir $name", { vm.playRecording(file) }, color = Color(0xFF4A90A4))
             }
         }
     }
 }
 
+@Composable
+private fun ParentTtsCard(
+    vm: AppViewModel,
+    message: String,
+    voiceLanguage: String?,
+    voiceName: String?,
+    requiresNetwork: Boolean?,
+    allowFallback: Boolean,
+    onAllowFallback: (Boolean) -> Unit,
+) {
+    PixelCard {
+        Text("Voz portuguesa", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(message, fontSize = 16.sp)
+        if (voiceLanguage != null && voiceName != null && requiresNetwork != null) {
+            Text("$voiceLanguage - $voiceName", fontSize = 15.sp)
+            Text(if (requiresNetwork) "Precisa de rede" else "Disponível offline", fontSize = 15.sp)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BlockButton("Verificar", { vm.refreshPortugueseVoice() }, Modifier.weight(1f))
+            BlockButton("Instalar", { vm.installPortugueseVoice() }, Modifier.weight(1f), color = Color(0xFFD6A22A))
+        }
+        BlockButton("Testar voz", { vm.testPortugueseVoice() }, color = Color(0xFF4A90A4))
+        Row(horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Permitir outra voz portuguesa", fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Switch(allowFallback, onAllowFallback)
+        }
+    }
+}
+
 private fun groupForRecording(name: String): String {
-    ReferenceSound.fromDisplayText(name)?.let {
-        return when (it) {
-            ReferenceSound.S -> "S"
-            ReferenceSound.Z -> "Z"
-            ReferenceSound.CH -> "X/CH"
-            ReferenceSound.J -> "J"
-        }
+    val referenceGroup = when (ReferenceSound.fromDisplayText(name)) {
+        ReferenceSound.S -> "S"
+        ReferenceSound.Z -> "Z"
+        ReferenceSound.CH -> "X/CH"
+        ReferenceSound.J -> "J"
+        null -> null
     }
-    LocalGameData.targets.forEach { target ->
-        if (target.exampleWords.any { it.equals(name, ignoreCase = true) }) {
-            return when (target.id) {
-                "s" -> "S"
-                "z" -> "Z"
-                "x" -> "X/CH"
-                "j" -> "J"
-                else -> "Todas"
-            }
-        }
-    }
-    return "Todas"
+    val targetId = LocalGameData.targets
+        .firstOrNull { target -> target.exampleWords.any { it.equals(name, ignoreCase = true) } }
+        ?.id
+    return referenceGroup ?: groupForTargetId(targetId)
+}
+
+private fun groupForTargetId(targetId: String?): String = when (targetId) {
+    "s" -> "S"
+    "z" -> "Z"
+    "x" -> "X/CH"
+    "j" -> "J"
+    else -> "Todas"
 }

@@ -11,7 +11,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun CharacterTile(emoji: String, title: String, subtitle: String, modifier: Modifier = Modifier) {
+fun CharacterTile(
+    emoji: String,
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+) {
     PixelCard(modifier = modifier) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(emoji, fontSize = 42.sp)

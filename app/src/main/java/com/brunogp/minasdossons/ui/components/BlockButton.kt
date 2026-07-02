@@ -28,7 +28,8 @@ fun BlockButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier
+        modifier =
+        modifier
             .heightIn(min = 58.dp)
             .fillMaxWidth()
             .semantics { contentDescription = text },

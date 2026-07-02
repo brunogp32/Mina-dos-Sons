@@ -23,11 +23,11 @@ import com.brunogp.minasdossons.R
 import com.brunogp.minasdossons.data.rewards.ChestType
 
 object ChestAnimationSpec {
-    const val ClosedFrame = 0
-    const val ShakeFrame = 1
-    const val OpenFrame = 2
-    const val GlowFrame = 3
-    const val FrameCount = 4
+    const val CLOSED_FRAME = 0
+    const val SHAKE_FRAME = 1
+    const val OPEN_FRAME = 2
+    const val GLOW_FRAME = 3
+    const val FRAME_COUNT = 4
 }
 
 @Composable
@@ -44,13 +44,20 @@ fun ChestSpriteAnimation(
         label = "chest-pulse",
     )
     val frames = framesFor(chestType)
-    val frame = if (opened) {
-        if (pulse < 0.33f) 1 else if (pulse < 0.66f) 2 else 3
-    } else if (pulse > 0.55f) {
-        ChestAnimationSpec.ShakeFrame
-    } else {
-        ChestAnimationSpec.ClosedFrame
-    }.coerceIn(0, frames.lastIndex)
+    val frame =
+        if (opened) {
+            if (pulse < 0.33f) {
+                1
+            } else if (pulse < 0.66f) {
+                2
+            } else {
+                3
+            }
+        } else if (pulse > 0.55f) {
+            ChestAnimationSpec.SHAKE_FRAME
+        } else {
+            ChestAnimationSpec.CLOSED_FRAME
+        }.coerceIn(0, frames.lastIndex)
 
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -61,7 +68,11 @@ fun ChestSpriteAnimation(
                     drawCircle(
                         Color(0xFFFFD86B).copy(alpha = 0.28f + pulse * 0.22f),
                         radius = size.minDimension * 0.017f,
-                        center = Offset(center.x + kotlin.math.cos(angle) * size.minDimension * 0.38f, center.y + kotlin.math.sin(angle) * size.minDimension * 0.25f),
+                        center =
+                        Offset(
+                            center.x + kotlin.math.cos(angle) * size.minDimension * 0.38f,
+                            center.y + kotlin.math.sin(angle) * size.minDimension * 0.25f,
+                        ),
                     )
                 }
             }
@@ -76,8 +87,24 @@ fun ChestSpriteAnimation(
 }
 
 private fun framesFor(type: ChestType): List<Int> = when (type) {
-    ChestType.WOOD -> listOf(R.drawable.chest_wood_00, R.drawable.chest_wood_01, R.drawable.chest_wood_02, R.drawable.chest_wood_03)
-    ChestType.IRON -> listOf(R.drawable.chest_iron_00, R.drawable.chest_iron_01, R.drawable.chest_iron_02, R.drawable.chest_iron_03)
-    ChestType.GOLD -> listOf(R.drawable.chest_gold_00, R.drawable.chest_gold_01, R.drawable.chest_gold_02, R.drawable.chest_gold_03)
-    ChestType.CRYSTAL -> listOf(R.drawable.chest_crystal_00, R.drawable.chest_crystal_01, R.drawable.chest_crystal_02, R.drawable.chest_crystal_03)
+    ChestType.WOOD -> {
+        listOf(R.drawable.chest_wood_00, R.drawable.chest_wood_01, R.drawable.chest_wood_02, R.drawable.chest_wood_03)
+    }
+
+    ChestType.IRON -> {
+        listOf(R.drawable.chest_iron_00, R.drawable.chest_iron_01, R.drawable.chest_iron_02, R.drawable.chest_iron_03)
+    }
+
+    ChestType.GOLD -> {
+        listOf(R.drawable.chest_gold_00, R.drawable.chest_gold_01, R.drawable.chest_gold_02, R.drawable.chest_gold_03)
+    }
+
+    ChestType.CRYSTAL -> {
+        listOf(
+            R.drawable.chest_crystal_00,
+            R.drawable.chest_crystal_01,
+            R.drawable.chest_crystal_02,
+            R.drawable.chest_crystal_03,
+        )
+    }
 }

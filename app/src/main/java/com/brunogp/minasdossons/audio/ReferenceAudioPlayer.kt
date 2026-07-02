@@ -6,10 +6,10 @@ import android.media.MediaPlayer
 class ReferenceAudioPlayer(
     private val context: Context,
     private val repository: ReferenceAudioRepository,
-) {
+) : ReferenceSoundOutput {
     private var player: MediaPlayer? = null
 
-    fun playReferenceSound(sound: ReferenceSound): Boolean {
+    override fun playReferenceSound(sound: ReferenceSound): Boolean {
         stop()
         return runCatching {
             player =
@@ -26,7 +26,7 @@ class ReferenceAudioPlayer(
         }.isSuccess
     }
 
-    fun stop() {
+    override fun stop() {
         player?.release()
         player = null
     }

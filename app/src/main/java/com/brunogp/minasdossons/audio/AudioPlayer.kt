@@ -3,7 +3,7 @@ package com.brunogp.minasdossons.audio
 import android.media.MediaPlayer
 import java.io.File
 
-class AudioPlayer {
+class AudioPlayer : RecordingPlaybackOutput {
     private var player: MediaPlayer? = null
 
     fun play(file: File?): Boolean {
@@ -20,7 +20,7 @@ class AudioPlayer {
         }.isSuccess
     }
 
-    fun stop() {
+    override fun stop() {
         player?.release()
         player = null
     }

@@ -7,7 +7,10 @@ Aplicação Android offline, em português de Portugal, para apoiar crianças no
 
 ## Descarregar APK
 
-**[Descarregar Mina dos Sons para Android](https://github.com/brunogp32/Mina-dos-Sons/releases/latest/download/Mina.dos.Sons-v1.0.0.apk)**
+**[Descarregar a APK mais recente](https://github.com/brunogp32/Mina-dos-Sons/releases/latest)**
+
+A versão pública mais recente aparece sempre em GitHub Releases. A APK final deve ser uma build `release`
+assinada, nunca a build `debug`.
 
 Se o Android avisar que a instalação veio de uma fonte desconhecida:
 
@@ -55,7 +58,7 @@ Requisitos:
 .\gradlew.bat assembleDebug
 ```
 
-APK debug:
+APK debug apenas para QA local:
 
 ```text
 app/build/outputs/apk/debug/Mina dos Sons.apk
@@ -70,8 +73,11 @@ Também pode ser copiado para distribuição local com:
 Resultado:
 
 ```text
-dist/Mina dos Sons-v1.0.0.apk
+dist/Mina-dos-Sons-v1.1.0-debug.apk
 ```
+
+Para publicar uma release final e assinada, configure os secrets descritos em
+[docs/PUBLICACAO_GITHUB.md](docs/PUBLICACAO_GITHUB.md) e crie uma tag `v1.1.0`.
 
 ## Assets
 
@@ -85,7 +91,8 @@ Ver [ASSET_LICENSES.md](ASSET_LICENSES.md) e [THIRD_PARTY_NOTICES.md](THIRD_PART
 .\gradlew.bat testDebugUnitTest
 .\gradlew.bat lintDebug
 .\gradlew.bat assembleDebug
-.\gradlew.bat connectedDebugAndroidTest
+.\gradlew.bat ktlintCheck
+.\gradlew.bat detekt
 python tools/audit_pt_pt.py
 ```
 

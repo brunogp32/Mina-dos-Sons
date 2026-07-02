@@ -6,11 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.brunogp.minasdossons.audio.AudioCoordinator
 import com.brunogp.minasdossons.audio.AudioPlayer
 import com.brunogp.minasdossons.audio.AudioRecorder
 import com.brunogp.minasdossons.audio.ReferenceAudioPlayer
 import com.brunogp.minasdossons.audio.ReferenceAudioRepository
-import com.brunogp.minasdossons.audio.ReferenceSound
 import com.brunogp.minasdossons.audio.SpeechHelper
 import com.brunogp.minasdossons.data.GameProgress
 import com.brunogp.minasdossons.data.MinimalPair
@@ -27,8 +27,6 @@ import com.brunogp.minasdossons.game.GameEngine
 import com.brunogp.minasdossons.game.RewardEngine
 import com.brunogp.minasdossons.navigation.AppNavGraph
 import com.brunogp.minasdossons.ui.theme.MinasDosSonsTheme
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -57,7 +55,7 @@ class AppViewModel(
     val player = AudioPlayer()
     val referenceAudioRepository = ReferenceAudioRepository(application)
     val referenceAudioPlayer = ReferenceAudioPlayer(application, referenceAudioRepository)
-    private var referenceSequenceJob: Job? = null
+    private val audioCoordinator = AudioCoordinator(viewModelScope, speech, referenceAudioPlayer, player)
 
     val progress: StateFlow<GameProgress> =
         repository.progress.stateIn(
@@ -71,38 +69,11 @@ class AppViewModel(
     }
 
     fun playTextOrReference(text: String) {
-        referenceSequenceJob?.cancel()
-        val reference = ReferenceSound.fromDisplayText(text)
-        if (reference != null) {
-            referenceAudioPlayer.playReferenceSound(reference)
-            return
-        }
-        val soundsInText =
-            ReferenceSound.entries
-                .mapNotNull { sound ->
-                    val index = text.indexOf(sound.displayText, ignoreCase = true)
-                    if (index >= 0) index to sound else null
-                }.sortedBy { it.first }
-                .map { it.second }
-        if (soundsInText.isNotEmpty()) {
-            referenceSequenceJob =
-                viewModelScope.launch {
-                    soundsInText.forEachIndexed { index, sound ->
-                        if (index > 0) delay(1_050L)
-                        referenceAudioPlayer.playReferenceSound(sound)
-                    }
-                }
-            return
-        }
-        speech.speak(text, progress.value.slowVoice, progress.value.ttsEnabled)
+        audioCoordinator.playTextOrReference(text, progress.value.slowVoice, progress.value.ttsEnabled)
     }
 
     fun stopExerciseAudio() {
-        referenceSequenceJob?.cancel()
-        referenceSequenceJob = null
-        referenceAudioPlayer.stop()
-        player.stop()
-        speech.stop()
+        audioCoordinator.stopAll()
     }
 
     fun completeSession(
@@ -226,11 +197,8 @@ class AppViewModel(
     }
 
     override fun onCleared() {
-        referenceSequenceJob?.cancel()
-        speech.shutdown()
+        audioCoordinator.release()
         recorder.stop()
-        player.stop()
-        referenceAudioPlayer.stop()
         super.onCleared()
     }
 }

@@ -14,7 +14,10 @@ import androidx.compose.ui.unit.sp
 import com.brunogp.minasdossons.data.rewards.ChestReward
 
 @Composable
-fun CardRevealRow(reward: ChestReward, modifier: Modifier = Modifier) {
+fun CardRevealRow(
+    reward: ChestReward,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -25,7 +28,11 @@ fun CardRevealRow(reward: ChestReward, modifier: Modifier = Modifier) {
             Text(reward.item.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Text("${reward.item.rarity.symbol} ${reward.item.rarity.label} ${reward.item.rarity.stars}", fontSize = 14.sp)
             if (reward.isDuplicate) {
-                Text("Já tinhas esta carta. Recebeste ${reward.duplicateDiamonds} diamantes.", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Já tinhas esta carta. Recebeste ${reward.duplicateDiamonds} diamantes.",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }

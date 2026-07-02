@@ -6,8 +6,13 @@ import com.brunogp.minasdossons.data.cards.CardRarity
 import kotlin.math.ceil
 import kotlin.random.Random
 
-class ChestRewardEngine(private val random: Random = Random.Default) {
-    fun openChest(progress: GameProgress, chestType: ChestType): Pair<ChestOpeningResult, GameProgress> {
+class ChestRewardEngine(
+    private val random: Random = Random.Default,
+) {
+    fun openChest(
+        progress: GameProgress,
+        chestType: ChestType,
+    ): Pair<ChestOpeningResult, GameProgress> {
         val forced = forcedRarity(progress)
         val rewards = mutableListOf<ChestReward>()
         var owned = progress.ownedRewardIds
@@ -16,8 +21,10 @@ class ChestRewardEngine(private val random: Random = Random.Default) {
         if (forced != null) rarities[0] = forced
 
         rarities.forEach { rarity ->
-            val candidates = CardCatalog.cards.filter { it.chestEligible && it.rarity == rarity }
-                .ifEmpty { CardCatalog.cards.filter { it.chestEligible } }
+            val candidates =
+                CardCatalog.cards
+                    .filter { it.chestEligible && it.rarity == rarity }
+                    .ifEmpty { CardCatalog.cards.filter { it.chestEligible } }
             val item = candidates.random(random)
             val duplicate = owned.contains(item.id)
             val conversion = if (duplicate) ceil(item.price * 0.25).toInt().coerceAtLeast(1) else 0
@@ -33,17 +40,24 @@ class ChestRewardEngine(private val random: Random = Random.Default) {
         val epicCounter = if (obtained.any { it.ordinal >= CardRarity.CRYSTAL.ordinal }) 0 else progress.epicPityCounter + 1
         val legendaryCounter = if (obtained.contains(CardRarity.RAINBOW)) 0 else progress.legendaryPityCounter + 1
         val result = ChestOpeningResult(chestType, rewards, chestDiamonds, owned, rareCounter, epicCounter, legendaryCounter)
-        var updated = progress.copy(
-            ownedRewardIds = owned,
-            newRewardIds = progress.newRewardIds + rewards.filterNot { it.isDuplicate }.map { it.item.id },
-            openedChestCount = progress.openedChestCount + 1,
-            rarePityCounter = rareCounter,
-            epicPityCounter = epicCounter,
-            legendaryPityCounter = legendaryCounter,
-            unopenedChests = progress.unopenedChests.drop(1),
-            chestHistory = (progress.chestHistory + "${System.currentTimeMillis()}:${chestType.name}").takeLast(50),
-        )
-        updated = DiamondRepository.addTransaction(updated, baseDiamonds, DiamondTransactionType.CHEST_REWARD, "${chestType.label}: $baseDiamonds diamantes")
+        var updated =
+            progress.copy(
+                ownedRewardIds = owned,
+                newRewardIds = progress.newRewardIds + rewards.filterNot { it.isDuplicate }.map { it.item.id },
+                openedChestCount = progress.openedChestCount + 1,
+                rarePityCounter = rareCounter,
+                epicPityCounter = epicCounter,
+                legendaryPityCounter = legendaryCounter,
+                unopenedChests = progress.unopenedChests.drop(1),
+                chestHistory = (progress.chestHistory + "${System.currentTimeMillis()}:${chestType.name}").takeLast(50),
+            )
+        updated =
+            DiamondRepository.addTransaction(
+                updated,
+                baseDiamonds,
+                DiamondTransactionType.CHEST_REWARD,
+                "${chestType.label}: $baseDiamonds diamantes",
+            )
         duplicateDiamonds.takeIf { it > 0 }?.let {
             updated = DiamondRepository.addTransaction(updated, it, DiamondTransactionType.DUPLICATE_CONVERSION, "Duplicados convertidos")
         }
@@ -60,21 +74,32 @@ class ChestRewardEngine(private val random: Random = Random.Default) {
     private fun chooseRarity(chestType: ChestType): CardRarity {
         val roll = random.nextInt(100)
         return when (chestType) {
-            ChestType.WOOD -> if (roll < 75) CardRarity.BRONZE else CardRarity.SILVER
-            ChestType.IRON -> when {
-                roll < 50 -> CardRarity.BRONZE
-                roll < 85 -> CardRarity.SILVER
-                else -> CardRarity.GOLD
+            ChestType.WOOD -> {
+                if (roll < 75) CardRarity.BRONZE else CardRarity.SILVER
             }
-            ChestType.GOLD -> when {
-                roll < 45 -> CardRarity.SILVER
-                roll < 85 -> CardRarity.GOLD
-                else -> CardRarity.CRYSTAL
+
+            ChestType.IRON -> {
+                when {
+                    roll < 50 -> CardRarity.BRONZE
+                    roll < 85 -> CardRarity.SILVER
+                    else -> CardRarity.GOLD
+                }
             }
-            ChestType.CRYSTAL -> when {
-                roll < 50 -> CardRarity.GOLD
-                roll < 85 -> CardRarity.CRYSTAL
-                else -> CardRarity.RAINBOW
+
+            ChestType.GOLD -> {
+                when {
+                    roll < 45 -> CardRarity.SILVER
+                    roll < 85 -> CardRarity.GOLD
+                    else -> CardRarity.CRYSTAL
+                }
+            }
+
+            ChestType.CRYSTAL -> {
+                when {
+                    roll < 50 -> CardRarity.GOLD
+                    roll < 85 -> CardRarity.CRYSTAL
+                    else -> CardRarity.RAINBOW
+                }
             }
         }
     }

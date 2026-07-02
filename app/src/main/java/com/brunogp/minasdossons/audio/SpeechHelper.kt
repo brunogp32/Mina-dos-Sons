@@ -4,7 +4,9 @@ import android.content.Context
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 
-class SpeechHelper(context: Context) : TextToSpeech.OnInitListener {
+class SpeechHelper(
+    context: Context,
+) : TextToSpeech.OnInitListener {
     private var ready = false
     private val tts = TextToSpeech(context.applicationContext, this)
 
@@ -19,12 +21,17 @@ class SpeechHelper(context: Context) : TextToSpeech.OnInitListener {
         }
     }
 
-    fun speak(text: String, slow: Boolean = false, enabled: Boolean = true) {
+    fun speak(
+        text: String,
+        slow: Boolean = false,
+        enabled: Boolean = true,
+    ) {
         if (!ready || !enabled) return
         tts.setSpeechRate(if (slow) 0.72f else 0.95f)
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "minas-dos-sons")
     }
 
     fun stop() = tts.stop()
+
     fun shutdown() = tts.shutdown()
 }

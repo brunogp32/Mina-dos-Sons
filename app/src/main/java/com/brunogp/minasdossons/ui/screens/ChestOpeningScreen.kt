@@ -28,7 +28,10 @@ import com.brunogp.minasdossons.ui.rewards.ChestParticleEffect
 import com.brunogp.minasdossons.ui.rewards.ChestSpriteAnimation
 
 @Composable
-fun ChestOpeningScreen(vm: AppViewModel, nav: NavController) {
+fun ChestOpeningScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val progress by vm.progress.collectAsState()
     var result by remember { mutableStateOf<ChestOpeningResult?>(null) }
     var opened by remember { mutableStateOf(false) }
@@ -44,7 +47,8 @@ fun ChestOpeningScreen(vm: AppViewModel, nav: NavController) {
         PixelCard {
             Text(result?.chestType?.label ?: nextChest!!.label, fontSize = 24.sp, fontWeight = FontWeight.Black)
             Box(
-                modifier = Modifier
+                modifier =
+                Modifier
                     .fillMaxWidth()
                     .height(190.dp)
                     .clickable {

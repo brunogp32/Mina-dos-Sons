@@ -13,7 +13,10 @@ import com.brunogp.minasdossons.ui.components.BlockProgressBar
 import com.brunogp.minasdossons.ui.components.PixelCard
 
 @Composable
-fun ProgressScreen(vm: AppViewModel, nav: NavController) {
+fun ProgressScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val p by vm.progress.collectAsState()
     MineScreen {
         ScreenTitle("Progresso")

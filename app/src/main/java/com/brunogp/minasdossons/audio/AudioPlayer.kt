@@ -10,12 +10,13 @@ class AudioPlayer {
         if (file == null || !file.exists()) return false
         stop()
         return runCatching {
-            player = MediaPlayer().apply {
-                setDataSource(file.absolutePath)
-                setOnCompletionListener { stop() }
-                prepare()
-                start()
-            }
+            player =
+                MediaPlayer().apply {
+                    setDataSource(file.absolutePath)
+                    setOnCompletionListener { stop() }
+                    prepare()
+                    start()
+                }
         }.isSuccess
     }
 

@@ -40,7 +40,10 @@ import com.brunogp.minasdossons.ui.components.BlockButton
 import com.brunogp.minasdossons.ui.components.PixelCard
 
 @Composable
-fun CardCollectionScreen(vm: AppViewModel, nav: NavController) {
+fun CardCollectionScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val progress by vm.progress.collectAsState()
     var tab by remember { mutableIntStateOf(0) }
     var focus by remember { mutableStateOf<SoundFocus?>(null) }
@@ -69,13 +72,21 @@ fun CardCollectionScreen(vm: AppViewModel, nav: NavController) {
         when (tab) {
             0 -> {
                 CollectionSummary(owned = owned, newCount = newCards)
-                CardFilters(focus, rarity, onlyNew, onFocus = { focus = it }, onRarity = { rarity = it }, onOnlyNew = { onlyNew = !onlyNew })
-                val ownedCards = CardCatalog.cards
-                    .filter { owned.contains(it.id) }
+                CardFilters(
+                    focus,
+                    rarity,
+                    onlyNew,
+                    onFocus = { focus = it },
+                    onRarity = { rarity = it },
+                    onOnlyNew = { onlyNew = !onlyNew },
+                )
+                val ownedCards =
+                    CardCatalog.cards
+                        .filter { owned.contains(it.id) }
                         .filter { focus == null || it.soundFocus == focus }
                         .filter { rarity == null || it.rarity == rarity }
                         .filter { !onlyNew || (progress.newRewardIds.contains(it.id) && !progress.viewedRewardIds.contains(it.id)) }
-                    .sortedWith(compareBy<CardItem> { it.soundFocus.ordinal }.thenBy { it.rarity.ordinal }.thenBy { it.cardNumber })
+                        .sortedWith(compareBy<CardItem> { it.soundFocus.ordinal }.thenBy { it.rarity.ordinal }.thenBy { it.cardNumber })
                 if (ownedCards.isEmpty()) {
                     PixelCard {
                         Text("Ainda não tens cartas neste grupo.", fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -93,24 +104,30 @@ fun CardCollectionScreen(vm: AppViewModel, nav: NavController) {
                     )
                 }
             }
+
             1 -> {
                 PixelCard {
                     Text("Baús por abrir: ${progress.unopenedChests.size}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     ChestType.entries.forEach { chest ->
-                        Text("${chest.label}: ${chest.prizeCount} cartas + ${chest.diamondRange.first}-${chest.diamondRange.last} diamantes", fontSize = 16.sp)
+                        Text(
+                            "${chest.label}: ${chest.prizeCount} cartas + ${chest.diamondRange.first}-${chest.diamondRange.last} diamantes",
+                            fontSize = 16.sp,
+                        )
                     }
                 }
                 if (progress.unopenedChests.isNotEmpty()) {
                     BlockButton("Abrir próximo baú", { nav.navigate("chest") }, color = Color(0xFFD6A22A))
                 }
             }
+
             2 -> {
                 PixelCard {
                     Text("Loja de cartas", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Text("As cartas que já tens ficam marcadas e não podem ser compradas outra vez.", fontSize = 16.sp)
                 }
                 CardGrid(
-                    cards = CardCatalog.cards
+                    cards =
+                    CardCatalog.cards
                         .filter { it.shopEligible }
                         .sortedWith(compareBy<CardItem> { owned.contains(it.id) }.thenBy { it.price }.thenBy { it.cardNumber }),
                     owned = owned,
@@ -149,23 +166,39 @@ fun CardCollectionScreen(vm: AppViewModel, nav: NavController) {
                         "Queres trocar ${card.price} diamantes por esta carta?"
                     } else {
                         "Faltam-te ${card.price - progress.diamondBalance} diamantes. Continua a treinar para conseguires mais."
-                    }
+                    },
                 )
             },
             confirmButton = {
                 BlockButton("Comprar", {
                     purchaseState = CardPurchaseUiState.Processing(card)
-                    purchaseState = when (val result = vm.purchaseCard(card.id)) {
-                        is CardPurchaseResult.Success -> {
-                            buying = null
-                            CardPurchaseUiState.Success(result.card)
+                    purchaseState =
+                        when (val result = vm.purchaseCard(card.id)) {
+                            is CardPurchaseResult.Success -> {
+                                buying = null
+                                CardPurchaseUiState.Success(result.card)
+                            }
+
+                            CardPurchaseResult.AlreadyOwned -> {
+                                CardPurchaseUiState.Error("Já tens esta carta.")
+                            }
+
+                            CardPurchaseResult.InsufficientDiamonds -> {
+                                CardPurchaseUiState.Error("Faltam-te diamantes. Continua a treinar para conseguires mais.")
+                            }
+
+                            CardPurchaseResult.InvalidCard -> {
+                                CardPurchaseUiState.Error("Esta carta não está disponível.")
+                            }
+
+                            CardPurchaseResult.InProgress -> {
+                                CardPurchaseUiState.Processing(card)
+                            }
+
+                            CardPurchaseResult.Error -> {
+                                CardPurchaseUiState.Error("Não foi possível guardar a compra.")
+                            }
                         }
-                        CardPurchaseResult.AlreadyOwned -> CardPurchaseUiState.Error("Já tens esta carta.")
-                        CardPurchaseResult.InsufficientDiamonds -> CardPurchaseUiState.Error("Faltam-te diamantes. Continua a treinar para conseguires mais.")
-                        CardPurchaseResult.InvalidCard -> CardPurchaseUiState.Error("Esta carta não está disponível.")
-                        CardPurchaseResult.InProgress -> CardPurchaseUiState.Processing(card)
-                        CardPurchaseResult.Error -> CardPurchaseUiState.Error("Não foi possível guardar a compra.")
-                    }
                 }, enabled = !alreadyOwned && progress.diamondBalance >= card.price && purchaseState !is CardPurchaseUiState.Processing)
             },
             dismissButton = { BlockButton("Voltar", { buying = null }, color = Color(0xFF607D8B)) },
@@ -173,25 +206,41 @@ fun CardCollectionScreen(vm: AppViewModel, nav: NavController) {
     }
 
     when (val state = purchaseState) {
-        is CardPurchaseUiState.Success -> AlertDialog(
-            onDismissRequest = { purchaseState = CardPurchaseUiState.Idle },
-            title = { Text("Novo cartão para a tua coleção!") },
-            text = { CollectibleCard(state.card, Modifier.fillMaxWidth().aspectRatio(0.75f), locked = false) },
-            confirmButton = { BlockButton("Ver carta", { selected = state.card; purchaseState = CardPurchaseUiState.Idle }) },
-            dismissButton = { BlockButton("Continuar", { purchaseState = CardPurchaseUiState.Idle }, color = Color(0xFF607D8B)) },
-        )
-        is CardPurchaseUiState.Error -> AlertDialog(
-            onDismissRequest = { purchaseState = CardPurchaseUiState.Idle },
-            title = { Text("Compra não concluída") },
-            text = { Text(state.message) },
-            confirmButton = { BlockButton("Voltar", { purchaseState = CardPurchaseUiState.Idle }, color = Color(0xFF607D8B)) },
-        )
-        else -> Unit
+        is CardPurchaseUiState.Success -> {
+            AlertDialog(
+                onDismissRequest = { purchaseState = CardPurchaseUiState.Idle },
+                title = { Text("Novo cartão para a tua coleção!") },
+                text = { CollectibleCard(state.card, Modifier.fillMaxWidth().aspectRatio(0.75f), locked = false) },
+                confirmButton = {
+                    BlockButton("Ver carta", {
+                        selected = state.card
+                        purchaseState = CardPurchaseUiState.Idle
+                    })
+                },
+                dismissButton = { BlockButton("Continuar", { purchaseState = CardPurchaseUiState.Idle }, color = Color(0xFF607D8B)) },
+            )
+        }
+
+        is CardPurchaseUiState.Error -> {
+            AlertDialog(
+                onDismissRequest = { purchaseState = CardPurchaseUiState.Idle },
+                title = { Text("Compra não concluída") },
+                text = { Text(state.message) },
+                confirmButton = { BlockButton("Voltar", { purchaseState = CardPurchaseUiState.Idle }, color = Color(0xFF607D8B)) },
+            )
+        }
+
+        else -> {
+            Unit
+        }
     }
 }
 
 @Composable
-private fun CollectionSummary(owned: Set<String>, newCount: Int) {
+private fun CollectionSummary(
+    owned: Set<String>,
+    newCount: Int,
+) {
     val byFocus = CardCatalog.cards.groupBy { it.soundFocus }.mapValues { (_, cards) -> cards.count { owned.contains(it.id) } }
     PixelCard {
         Text("A minha coleção", fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -199,7 +248,12 @@ private fun CollectionSummary(owned: Set<String>, newCount: Int) {
         Text("Cartas novas por ver: $newCount", fontSize = 16.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             SoundFocus.entries.take(4).forEach { focus ->
-                Text("${focus.label}: ${byFocus[focus] ?: 0}", modifier = Modifier.weight(1f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "${focus.label}: ${byFocus[focus] ?: 0}",
+                    modifier = Modifier.weight(1f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }
@@ -215,14 +269,58 @@ private fun CardFilters(
     onOnlyNew: () -> Unit,
 ) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        BlockButton("Todas", { onFocus(null); onRarity(null) }, Modifier.width(112.dp), color = if (focus == null && rarity == null) Color(0xFFD6A22A) else Color(0xFF607D8B))
+        BlockButton(
+            "Todas",
+            {
+                onFocus(null)
+                onRarity(null)
+            },
+            Modifier.width(112.dp),
+            color =
+            if (focus == null &&
+                rarity == null
+            ) {
+                Color(0xFFD6A22A)
+            } else {
+                Color(0xFF607D8B)
+            },
+        )
         SoundFocus.entries.forEach { item ->
-            BlockButton(item.label, { onFocus(item) }, Modifier.width(112.dp), color = if (focus == item) Color(0xFFD6A22A) else Color(0xFF4A90A4))
+            BlockButton(
+                item.label,
+                { onFocus(item) },
+                Modifier.width(112.dp),
+                color =
+                if (focus ==
+                    item
+                ) {
+                    Color(0xFFD6A22A)
+                } else {
+                    Color(0xFF4A90A4)
+                },
+            )
         }
         CardRarity.entries.forEach { item ->
-            BlockButton(item.shortLabel, { onRarity(item) }, Modifier.width(132.dp), color = if (rarity == item) Color(0xFFD6A22A) else Color(0xFF8B6BB1))
+            BlockButton(
+                item.shortLabel,
+                { onRarity(item) },
+                Modifier.width(132.dp),
+                color =
+                if (rarity ==
+                    item
+                ) {
+                    Color(0xFFD6A22A)
+                } else {
+                    Color(0xFF8B6BB1)
+                },
+            )
         }
-        BlockButton(if (onlyNew) "Novas ✓" else "Novas", onOnlyNew, Modifier.width(118.dp), color = if (onlyNew) Color(0xFFD6A22A) else Color(0xFF607D8B))
+        BlockButton(
+            if (onlyNew) "Novas ✓" else "Novas",
+            onOnlyNew,
+            Modifier.width(118.dp),
+            color = if (onlyNew) Color(0xFFD6A22A) else Color(0xFF607D8B),
+        )
     }
 }
 
@@ -246,11 +344,18 @@ private fun CardGrid(
                         locked = !hasCard && onBuy == null,
                         isNew = newIds.contains(card.id),
                     )
-                    Text(if (hasCard) "Já tens" else "${card.price} diamantes", fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Text(
+                        if (hasCard) "Já tens" else "${card.price} diamantes",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         BlockButton("Ver", { onOpen(card) }, Modifier.weight(1f), color = Color(0xFF4A90A4))
                         if (onBuy != null) {
-                            BlockButton(if (hasCard) "Já tens" else "Comprar", { onBuy(card) }, Modifier.weight(1f), enabled = !hasCard, color = if (hasCard) Color(0xFF607D8B) else Color(0xFF8B6BB1))
+                            BlockButton(if (hasCard) "Já tens" else "Comprar", {
+                                onBuy(card)
+                            }, Modifier.weight(1f), enabled = !hasCard, color = if (hasCard) Color(0xFF607D8B) else Color(0xFF8B6BB1))
                         }
                     }
                 }
@@ -261,7 +366,13 @@ private fun CardGrid(
 }
 
 @Composable
-private fun CardDetailsDialog(card: CardItem, owned: Boolean, canBuy: Boolean, onDismiss: () -> Unit, onBuy: () -> Unit) {
+private fun CardDetailsDialog(
+    card: CardItem,
+    owned: Boolean,
+    canBuy: Boolean,
+    onDismiss: () -> Unit,
+    onBuy: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(card.name) },

@@ -12,16 +12,17 @@ class ReferenceAudioPlayer(
     fun playReferenceSound(sound: ReferenceSound): Boolean {
         stop()
         return runCatching {
-            player = when (val source = repository.resolve(sound)) {
-                is ReferenceAudioSource.GeneratedFallback -> MediaPlayer().apply { setDataSource(source.file.absolutePath) }
-                is ReferenceAudioSource.RawResource -> MediaPlayer.create(context, source.resId)
-            }?.apply {
-                setOnCompletionListener { stop() }
-                if (!isPlaying) {
-                    prepareIfNeeded()
-                    start()
+            player =
+                when (val source = repository.resolve(sound)) {
+                    is ReferenceAudioSource.GeneratedFallback -> MediaPlayer().apply { setDataSource(source.file.absolutePath) }
+                    is ReferenceAudioSource.RawResource -> MediaPlayer.create(context, source.resId)
+                }?.apply {
+                    setOnCompletionListener { stop() }
+                    if (!isPlaying) {
+                        prepareIfNeeded()
+                        start()
+                    }
                 }
-            }
         }.isSuccess
     }
 

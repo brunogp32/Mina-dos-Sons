@@ -54,7 +54,8 @@ enum class ReferenceSound(
         vibrates = true,
         bundledRawResourceName = "som_j",
         instruction = "Faz JJJJ como no início de janela, de forma contínua.",
-    );
+    ),
+    ;
 
     companion object {
         fun fromDisplayText(text: String): ReferenceSound? {

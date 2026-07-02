@@ -12,25 +12,36 @@ object DiamondRepository {
         description: String,
         now: Long = System.currentTimeMillis(),
     ): GameProgress {
-        val transaction = DiamondTransaction(
-            id = "${now}_${type.name}_${progress.diamondTransactions.size}",
-            amount = amount,
-            type = type,
-            description = description,
-            timestamp = now,
-        )
+        val transaction =
+            DiamondTransaction(
+                id = "${now}_${type.name}_${progress.diamondTransactions.size}",
+                amount = amount,
+                type = type,
+                description = description,
+                timestamp = now,
+            )
         return progress.copy(
             diamondBalance = max(0, progress.diamondBalance + amount),
             diamondTransactions = (progress.diamondTransactions + transaction).takeLast(100),
         )
     }
 
-    fun spend(progress: GameProgress, price: Int, description: String): GameProgress? {
+    fun spend(
+        progress: GameProgress,
+        price: Int,
+        description: String,
+    ): GameProgress? {
         if (price < 0 || progress.diamondBalance < price) return null
         return addTransaction(progress, -price, DiamondTransactionType.SHOP_PURCHASE, description)
     }
 
-    fun rewardSession(progress: GameProgress, stars: Int, world: Int, level: Int, today: LocalDate = LocalDate.now()): GameProgress {
+    fun rewardSession(
+        progress: GameProgress,
+        stars: Int,
+        world: Int,
+        level: Int,
+        today: LocalDate = LocalDate.now(),
+    ): GameProgress {
         var updated = progress
         updated = addTransaction(updated, 2, DiamondTransactionType.SESSION_COMPLETION, "Sessão concluída")
         if (stars > 0) {
@@ -60,19 +71,36 @@ object DiamondRepository {
         return updated
     }
 
-    fun rewardNewWordRecording(progress: GameProgress, word: String, today: LocalDate = LocalDate.now()): GameProgress {
+    fun rewardNewWordRecording(
+        progress: GameProgress,
+        word: String,
+        today: LocalDate = LocalDate.now(),
+    ): GameProgress {
         val clean = word.trim()
-        if (clean.isBlank() || progress.uniqueRecordedWordsRewarded.contains(clean)) return progress
+        return when {
+            clean.isBlank() || progress.uniqueRecordedWordsRewarded.contains(clean) -> progress
+            else -> rewardCleanRecording(progress, clean, today)
+        }
+    }
+
+    private fun rewardCleanRecording(
+        progress: GameProgress,
+        clean: String,
+        today: LocalDate,
+    ): GameProgress {
         val todayText = today.toString()
         val todayCount = progress.recordingRewardDates.values.count { it == todayText }
-        if (todayCount >= 5) return progress.copy(
-            uniqueRecordedWordsRewarded = progress.uniqueRecordedWordsRewarded + clean,
-            recordingRewardDates = progress.recordingRewardDates + (clean to todayText),
-        )
-        val updated = addTransaction(progress, 1, DiamondTransactionType.NEW_WORD_RECORDING, "Nova gravação: $clean")
-        return updated.copy(
-            uniqueRecordedWordsRewarded = updated.uniqueRecordedWordsRewarded + clean,
-            recordingRewardDates = updated.recordingRewardDates + (clean to todayText),
-        )
+        return if (todayCount >= 5) {
+            progress.copy(
+                uniqueRecordedWordsRewarded = progress.uniqueRecordedWordsRewarded + clean,
+                recordingRewardDates = progress.recordingRewardDates + (clean to todayText),
+            )
+        } else {
+            val updated = addTransaction(progress, 1, DiamondTransactionType.NEW_WORD_RECORDING, "Nova gravação: $clean")
+            updated.copy(
+                uniqueRecordedWordsRewarded = updated.uniqueRecordedWordsRewarded + clean,
+                recordingRewardDates = updated.recordingRewardDates + (clean to todayText),
+            )
+        }
     }
 }

@@ -16,8 +16,8 @@ import com.brunogp.minasdossons.ui.screens.HomeScreen
 import com.brunogp.minasdossons.ui.screens.ParentModeScreen
 import com.brunogp.minasdossons.ui.screens.ProgressScreen
 import com.brunogp.minasdossons.ui.screens.RecordingScreen
-import com.brunogp.minasdossons.ui.screens.SettingsScreen
 import com.brunogp.minasdossons.ui.screens.SessionResultScreen
+import com.brunogp.minasdossons.ui.screens.SettingsScreen
 import com.brunogp.minasdossons.ui.screens.ThroatTrainingScreen
 import com.brunogp.minasdossons.ui.screens.WorldMapScreen
 
@@ -45,7 +45,15 @@ fun AppNavGraph(vm: AppViewModel = viewModel()) {
         composable("debugqa") { DebugQaScreen(vm, nav) }
         composable(
             "result/{stars}/{world}/{level}",
-            arguments = listOf(navArgument("stars") { type = NavType.IntType }, navArgument("world") { type = NavType.IntType }, navArgument("level") { type = NavType.IntType }),
+            arguments =
+            listOf(
+                navArgument("stars") { type = NavType.IntType },
+                navArgument("world") { type = NavType.IntType },
+                navArgument("level") {
+                    type =
+                        NavType.IntType
+                },
+            ),
         ) {
             SessionResultScreen(
                 vm,

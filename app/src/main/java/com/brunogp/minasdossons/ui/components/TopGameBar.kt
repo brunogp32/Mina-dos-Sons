@@ -11,7 +11,10 @@ import androidx.compose.ui.unit.sp
 import com.brunogp.minasdossons.data.GameProgress
 
 @Composable
-fun TopGameBar(progress: GameProgress, modifier: Modifier = Modifier) {
+fun TopGameBar(
+    progress: GameProgress,
+    modifier: Modifier = Modifier,
+) {
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         StarCounter(progress.totalStars)
         Text("M${progress.currentWorld} N${progress.currentLevel}", fontSize = 20.sp, fontWeight = FontWeight.Bold)

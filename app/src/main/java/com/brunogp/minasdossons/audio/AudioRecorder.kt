@@ -9,7 +9,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
-class AudioRecorder(private val context: Context) {
+class AudioRecorder(
+    private val context: Context,
+) {
     private var recorder: MediaRecorder? = null
     private var stopJob: Job? = null
     var currentFile: File? = null
@@ -26,12 +28,13 @@ class AudioRecorder(private val context: Context) {
         stop()
         val file = fileForLabel(label)
         if (file.exists()) file.delete()
-        val mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(context)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
-        }
+        val mediaRecorder =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -40,11 +43,12 @@ class AudioRecorder(private val context: Context) {
         mediaRecorder.start()
         recorder = mediaRecorder
         currentFile = file
-        stopJob = scope.launch {
-            delay(maxMillis)
-            finishRecording()
-            onFinished(file)
-        }
+        stopJob =
+            scope.launch {
+                delay(maxMillis)
+                finishRecording()
+                onFinished(file)
+            }
         file
     }
 
@@ -71,10 +75,9 @@ class AudioRecorder(private val context: Context) {
     private fun recordingDir(): File = File(context.filesDir, "recordings").apply { mkdirs() }
 
     companion object {
-        fun visibleFileName(label: String): String {
-            return label.trim()
-                .replace("[\\\\/:*?\"<>|]".toRegex(), "_")
-                .ifBlank { "voz" }
-        }
+        fun visibleFileName(label: String): String = label
+            .trim()
+            .replace("[\\\\/:*?\"<>|]".toRegex(), "_")
+            .ifBlank { "voz" }
     }
 }

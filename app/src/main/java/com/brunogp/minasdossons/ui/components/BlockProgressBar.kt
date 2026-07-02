@@ -11,13 +11,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun BlockProgressBar(value: Int, max: Int, modifier: Modifier = Modifier) {
+fun BlockProgressBar(
+    value: Int,
+    max: Int,
+    modifier: Modifier = Modifier,
+) {
     Row(modifier = modifier.height(24.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         repeat(max) { index ->
             androidx.compose.foundation.layout.Box(
                 Modifier
                     .size(24.dp)
-                    .background(if (index < value) Color(0xFFF7D35C) else Color(0xFFB8A98B))
+                    .background(if (index < value) Color(0xFFF7D35C) else Color(0xFFB8A98B)),
             )
         }
     }

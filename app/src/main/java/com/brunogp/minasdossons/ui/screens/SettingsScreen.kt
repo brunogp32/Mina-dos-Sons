@@ -16,7 +16,10 @@ import com.brunogp.minasdossons.ui.components.BlockButton
 import com.brunogp.minasdossons.ui.components.PixelCard
 
 @Composable
-fun SettingsScreen(vm: AppViewModel, nav: NavController) {
+fun SettingsScreen(
+    vm: AppViewModel,
+    nav: NavController,
+) {
     val p by vm.progress.collectAsState()
     MineScreen {
         ScreenTitle("Opções")
@@ -34,7 +37,11 @@ fun SettingsScreen(vm: AppViewModel, nav: NavController) {
 }
 
 @Composable
-private fun SettingRow(title: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
+private fun SettingRow(
+    title: String,
+    checked: Boolean,
+    onChecked: (Boolean) -> Unit,
+) {
     PixelCard {
         Row(horizontalArrangement = Arrangement.SpaceBetween) {
             Text(title, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))

@@ -199,8 +199,16 @@ class ProgressRepository(private val context: Context) {
     private fun decodeTransactions(value: String?): List<DiamondTransaction> = value?.split("|").orEmpty().mapNotNull { item ->
         val parts = item.split("~").map { dec(it) }
         if (parts.size == 5) {
-            val type = runCatching { DiamondTransactionType.valueOf(parts[2]) }.getOrNull() ?: return@mapNotNull null
-            DiamondTransaction(parts[0], parts[1].toIntOrNull() ?: 0, type, parts[3], parts[4].toLongOrNull() ?: 0L)
+            val type = runCatching {
+                DiamondTransactionType.valueOf(parts[2])
+            }.getOrNull() ?: return@mapNotNull null
+            DiamondTransaction(
+                id = parts[0],
+                amount = parts[1].toIntOrNull() ?: 0,
+                type = type,
+                description = parts[3],
+                timestamp = parts[4].toLongOrNull() ?: 0L,
+            )
         } else {
             null
         }

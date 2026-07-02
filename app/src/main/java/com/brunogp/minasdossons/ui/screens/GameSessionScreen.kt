@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,7 +39,12 @@ fun GameSessionScreen(vm: AppViewModel, nav: NavController, world: Int, level: I
     var feedback by remember { mutableStateOf("Ouve e constrói!") }
     val q = questions[index]
 
+    DisposableEffect(Unit) {
+        onDispose { vm.stopExerciseAudio() }
+    }
+
     LaunchedEffect(index) {
+        vm.stopExerciseAudio()
         tried = false
         feedback = "Boa escuta!"
     }
@@ -48,9 +54,11 @@ fun GameSessionScreen(vm: AppViewModel, nav: NavController, world: Int, level: I
             if (!tried) stars++
             feedback = if (q.type == QuestionType.THROAT_VIBRATES) q.explanation else listOf("Boa!", "Muito bem!", "Grande trabalho!").random()
             if (index == questions.lastIndex) {
+                vm.stopExerciseAudio()
                 vm.completeSession(world, level, stars)
                 nav.navigate("result/$stars/$world/$level") { popUpTo("home") }
             } else {
+                vm.stopExerciseAudio()
                 index++
             }
         } else {
@@ -109,6 +117,9 @@ fun GameSessionScreen(vm: AppViewModel, nav: NavController, world: Int, level: I
                 BlockButton(option, { answer(option) })
             }
         }
-        BackButton(nav)
+        BlockButton("Voltar", onClick = {
+            vm.stopExerciseAudio()
+            nav.popBackStack()
+        }, color = Color(0xFF6F6F6F))
     }
 }

@@ -30,6 +30,7 @@ import com.brunogp.minasdossons.ui.theme.MinasDosSonsTheme
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -54,6 +55,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val player = AudioPlayer()
     val referenceAudioRepository = ReferenceAudioRepository(application)
     val referenceAudioPlayer = ReferenceAudioPlayer(application, referenceAudioRepository)
+    private var referenceSequenceJob: Job? = null
 
     val progress: StateFlow<GameProgress> = repository.progress.stateIn(
         viewModelScope,
@@ -66,6 +68,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playTextOrReference(text: String) {
+        referenceSequenceJob?.cancel()
         val reference = ReferenceSound.fromDisplayText(text)
         if (reference != null) {
             referenceAudioPlayer.playReferenceSound(reference)
@@ -79,7 +82,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .sortedBy { it.first }
             .map { it.second }
         if (soundsInText.isNotEmpty()) {
-            viewModelScope.launch {
+            referenceSequenceJob = viewModelScope.launch {
                 soundsInText.forEachIndexed { index, sound ->
                     if (index > 0) delay(1_050L)
                     referenceAudioPlayer.playReferenceSound(sound)
@@ -88,6 +91,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         speech.speak(text, progress.value.slowVoice, progress.value.ttsEnabled)
+    }
+
+    fun stopExerciseAudio() {
+        referenceSequenceJob?.cancel()
+        referenceSequenceJob = null
+        referenceAudioPlayer.stop()
+        player.stop()
+        speech.stop()
     }
 
     fun completeSession(world: Int, level: Int, stars: Int) {
@@ -187,6 +198,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
+        referenceSequenceJob?.cancel()
         speech.shutdown()
         recorder.stop()
         player.stop()

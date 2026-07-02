@@ -1,0 +1,61 @@
+[
+  {
+    "pack": "Pixel Chest Pack",
+    "path": "design_sources\\Pixel Chest Pack",
+    "file_count": 60,
+    "total_bytes": 258487,
+    "file_types": {
+      ".png": 60
+    },
+    "image_count": 60,
+    "image_dimensions": {
+      "72x62": 11,
+      "48x32": 10,
+      "41x25": 6,
+      "48x38": 5,
+      "48x36": 5,
+      "40x26": 5,
+      "40x25": 5,
+      "43x40": 4,
+      "240x32": 2,
+      "200x25": 1,
+      "246x25": 1,
+      "200x26": 1,
+      "792x62": 1,
+      "172x40": 1,
+      "240x36": 1,
+      "240x38": 1
+    },
+    "images_with_alpha": 60,
+    "spritesheet_count": 9,
+    "spritesheets": [
+      "Pixel Chest Pack\\Golden Chest 1\\Golden Chest 1 - SpriteSheet.png",
+      "Pixel Chest Pack\\Golden Chest 2\\Golden Chest 2 - SpriteSheet.png",
+      "Pixel Chest Pack\\Golden Chest 3\\Golden Chest 3 - Spritesheet.png",
+      "Pixel Chest Pack\\Metal Chest\\Metal Chest - SpriteSheet.png",
+      "Pixel Chest Pack\\Retro Chest\\Retro Chest - SpriteSheet.png",
+      "Pixel Chest Pack\\Wooden Chest 1\\Wooden Chest 1 -  Spritesheet.png",
+      "Pixel Chest Pack\\Wooden Chest 2\\Wooden Chest 2 - Spritesheet.png",
+      "Pixel Chest Pack\\Wooden Chest 3\\Wooden Chest 3 - Spritesheet.png",
+      "Pixel Chest Pack\\Wooden Chest 4\\Wooden Chest 4 - Spritesheet.png"
+    ],
+    "animation_sequence_count": 9,
+    "svg_count": 0,
+    "png_count": 60,
+    "webp_count": 0,
+    "project_file_count": 0,
+    "vox_count": 0,
+    "obj_count": 0,
+    "license_files": [],
+    "readme_files": [],
+    "license_found": "Unknown",
+    "license_status": "rejected",
+    "authorship": "Not identified",
+    "modular_potential": "medium",
+    "android_integration": "easy",
+    "quality_score": 68,
+    "weighted_score": 61.3,
+    "decision": "accepted_by_user_authorization",
+    "decision_reason": "user confirmed authorization; preserve attribution (Unknown)"
+  }
+]

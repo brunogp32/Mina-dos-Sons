@@ -1,0 +1,17 @@
+name: Bug report
+description: Report a problem in Mina dos Sons
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: How can we reproduce it?
+    validations:
+      required: true

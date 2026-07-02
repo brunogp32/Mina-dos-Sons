@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Friendly speaking character -->
+    <path android:fillColor="#FFE0B2" android:pathData="M26,42 A24,24 0,1 0,74 42 A24,24 0,1 0,26 42" />
+    <path android:fillColor="#6D4C41" android:pathData="M26,40 C28,20 44,14 58,18 C70,22 78,32 76,44 C68,34 56,32 46,34 C38,36 32,40 26,40 Z" />
+    <path android:fillColor="#3C2F2F" android:pathData="M38,44 A4,4 0,1 0,46 44 A4,4 0,1 0,38 44 M58,44 A4,4 0,1 0,66 44 A4,4 0,1 0,58 44" />
+    <path android:fillColor="#D24D57" android:pathData="M46,58 C50,64 58,64 62,58 C58,60 50,60 46,58 Z" />
+    <path android:fillColor="#FFB74D" android:pathData="M49,48 C51,52 55,52 57,48 L54,55 Z" />
+
+    <!-- Body -->
+    <path android:fillColor="#4A90A4" android:pathData="M28,76 C34,66 66,66 72,76 L78,96 H22 Z" />
+    <path android:fillColor="#FFF7D7" android:pathData="M42,72 H58 L54,88 H46 Z" />
+
+    <!-- Speech bubble -->
+    <path android:fillColor="#FFFFFF" android:pathData="M72,20 H100 A6,6 0,0 1,106 26 V52 A6,6 0,0 1,100 58 H88 L78,68 V58 H72 A6,6 0,0 1,66 52 V26 A6,6 0,0 1,72 20 Z" />
+    <path android:fillColor="#2F7D32" android:pathData="M76,30 H84 V46 H80 V38 H76 Z M88,30 H96 V34 H92 V46 H88 Z M96,38 H100 V46 H96 Z" />
+
+    <!-- Colorful sound waves -->
+    <path android:strokeColor="#F7D35C" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="@android:color/transparent" android:pathData="M20,32 C12,40 12,52 20,60" />
+    <path android:strokeColor="#D24D57" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="@android:color/transparent" android:pathData="M12,24 C0,38 0,56 12,70" />
+    <path android:strokeColor="#5AA469" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="@android:color/transparent" android:pathData="M82,72 C90,78 92,88 86,96" />
+</vector>

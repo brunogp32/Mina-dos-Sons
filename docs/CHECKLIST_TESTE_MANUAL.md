@@ -1,0 +1,31 @@
+# Checklist de Teste Manual
+
+- [ ] Instalar o APK.
+- [ ] Abrir a aplicação.
+- [ ] Confirmar que não há conteúdo tapado pelas barras do Android.
+- [ ] Iniciar treino.
+- [ ] Ouvir SSSS, ZZZZ, CHHHH e JJJJ.
+- [ ] Completar o exercício “Sente a garganta”.
+- [ ] Confirmar que S e CH não vibram.
+- [ ] Confirmar que Z e J vibram.
+- [ ] Gravar duas palavras.
+- [ ] Regravar uma palavra e confirmar que só essa gravação é substituída.
+- [ ] Completar uma sessão.
+- [ ] Receber diamantes.
+- [ ] Abrir um baú.
+- [ ] Receber carta.
+- [ ] Confirmar duplicado convertido em diamantes.
+- [ ] Abrir “Cartas dos Sons”.
+- [ ] Testar filtros por S, Z, X/CH, J e raridade.
+- [ ] Abrir detalhes de carta.
+- [ ] Comprar carta com saldo.
+- [ ] Tentar comprar sem saldo.
+- [ ] Tocar rapidamente em comprar e confirmar uma única compra.
+- [ ] Abrir Modo Pais.
+- [ ] Testar multiplicação aleatória.
+- [ ] Rever gravações.
+- [ ] Confirmar que sons modelo não podem ser editados.
+- [ ] Testar texto grande do Android.
+- [ ] Testar num ecrã pequeno.
+- [ ] Testar sem permissão de microfone.
+- [ ] Testar botão Voltar em todos os ecrãs.

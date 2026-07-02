@@ -7,7 +7,7 @@ Aplicação Android offline, em português de Portugal, para apoiar crianças no
 
 ## Descarregar APK
 
-**[Descarregar Mina dos Sons para Android](releases/latest/download/Mina%20dos%20Sons-v1.0.0.apk)**
+**[Descarregar Mina dos Sons para Android](https://github.com/brunogp32/Mina-dos-Sons/releases/latest/download/Mina.dos.Sons-v1.0.0.apk)**
 
 Se o Android avisar que a instalação veio de uma fonte desconhecida:
 

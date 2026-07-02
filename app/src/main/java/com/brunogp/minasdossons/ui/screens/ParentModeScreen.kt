@@ -225,7 +225,8 @@ private fun RecordingListCard(
             Text("Ainda não há gravações neste filtro.", fontSize = 17.sp)
         } else {
             filtered.toSortedMap().forEach { (name, path) ->
-                val file = File(path)
+                val storedFile = File(path)
+                val file = if (storedFile.exists()) storedFile else vm.recorder.fileForLabel(name)
                 val date =
                     recordingDates[name] ?: runCatching {
                         Instant

@@ -1,6 +1,8 @@
 package com.brunogp.minasdossons.audio
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
@@ -23,24 +25,35 @@ class AndroidTtsEngineAdapter(
     context: Context,
     private val onInitialized: (Boolean) -> Unit,
 ) : TextToSpeech.OnInitListener {
-    private val tts = TextToSpeech(context.applicationContext, this)
+    private var tts: TextToSpeech? = null
+
+    init {
+        tts = TextToSpeech(context.applicationContext, this)
+    }
 
     override fun onInit(status: Int) {
-        tts.setOnUtteranceProgressListener(
-            object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) = Unit
-                override fun onDone(utteranceId: String?) = Unit
+        Handler(Looper.getMainLooper()).post {
+            val engine = tts
+            if (engine == null) {
+                onInitialized(false)
+                return@post
+            }
+            engine.setOnUtteranceProgressListener(
+                object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) = Unit
+                    override fun onDone(utteranceId: String?) = Unit
 
-                @Deprecated("Deprecated by Android")
-                override fun onError(utteranceId: String?) = Unit
-            },
-        )
-        onInitialized(status == TextToSpeech.SUCCESS)
+                    @Deprecated("Deprecated by Android")
+                    override fun onError(utteranceId: String?) = Unit
+                },
+            )
+            onInitialized(status == TextToSpeech.SUCCESS)
+        }
     }
 
     fun asAdapter(): TtsEngineAdapter = object : TtsEngineAdapter {
         override fun languageAvailability(localeTag: String): TtsLanguageAvailability {
-            val result = tts.isLanguageAvailable(Locale.forLanguageTag(localeTag))
+            val result = tts?.isLanguageAvailable(Locale.forLanguageTag(localeTag))
             return when (result) {
                 TextToSpeech.LANG_MISSING_DATA -> TtsLanguageAvailability.MissingData
 
@@ -55,7 +68,7 @@ class AndroidTtsEngineAdapter(
             }
         }
 
-        override fun voices(): List<TtsVoiceInfo> = tts.voices.orEmpty().map { voice ->
+        override fun voices(): List<TtsVoiceInfo> = tts?.voices.orEmpty().map { voice ->
             TtsVoiceInfo(
                 name = voice.name,
                 localeTag = voice.locale.toLanguageTag(),
@@ -64,12 +77,15 @@ class AndroidTtsEngineAdapter(
         }
 
         override fun selectVoice(voice: TtsVoiceInfo): Boolean {
-            val androidVoice = tts.voices.orEmpty().firstOrNull { it.name == voice.name } ?: return false
-            return tts.setVoice(androidVoice) == TextToSpeech.SUCCESS &&
+            val engine = tts
+            val androidVoice = engine?.voices.orEmpty().firstOrNull { it.name == voice.name }
+            return engine != null &&
+                androidVoice != null &&
+                engine.setVoice(androidVoice) == TextToSpeech.SUCCESS &&
                 selectedVoice()?.name == voice.name
         }
 
-        override fun selectedVoice(): TtsVoiceInfo? = tts.voice?.let { voice ->
+        override fun selectedVoice(): TtsVoiceInfo? = tts?.voice?.let { voice ->
             TtsVoiceInfo(
                 name = voice.name,
                 localeTag = voice.locale.toLanguageTag(),
@@ -82,16 +98,18 @@ class AndroidTtsEngineAdapter(
             utteranceId: String,
             slow: Boolean,
         ): Boolean {
-            tts.setSpeechRate(if (slow) 0.72f else 0.95f)
-            return tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId) == TextToSpeech.SUCCESS
+            val engine = tts ?: return false
+            engine.setSpeechRate(if (slow) 0.72f else 0.95f)
+            return engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId) == TextToSpeech.SUCCESS
         }
 
         override fun stop() {
-            tts.stop()
+            tts?.stop()
         }
 
         override fun shutdown() {
-            tts.shutdown()
+            tts?.shutdown()
+            tts = null
         }
     }
 }
